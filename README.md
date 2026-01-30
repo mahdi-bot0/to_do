@@ -9,10 +9,12 @@ A user-friendly todo list application with folder organization, checklist functi
 - 📁 Create multiple folders to organize your todos
 - ✅ Add, check, and delete checklist items
 - 📅 Set due dates for tasks with visual urgency indicators
+- 🎯 Priority levels (high/medium/low) with color-coded badges
+- 🔍 Filter and sort tasks by priority or due date
 - 💾 Persistent storage using localStorage
 - 🎨 Clean, modern, responsive design
 - 🚀 No dependencies - just open and use
-- 🤖 Claude AI integration for automated development via GitHub comments
+- 🤖 Claude CLI integration for rapid feature development
 
 ## Quick Start for New Projects
 
@@ -22,8 +24,8 @@ Here's the complete setup flow for creating a similar project from scratch:
 2. **GitHub Repo** → Create repository, push initial code
 3. **GitHub Pages** → Enable Pages with GitHub Actions source
 4. **GitHub CLI** → Install `gh`, authenticate with `gh auth login`
-5. **Claude Integration** → Get Anthropic API key, add to repository secrets
-6. **Development** → Create issues, mention `@claude`, merge PRs
+5. **Claude CLI** → Use Claude Code CLI for rapid development
+6. **Development** → Create issues, implement features, merge PRs
 
 **See detailed instructions below for each step.**
 
@@ -162,68 +164,56 @@ gh auth status
 
 You should see confirmation that you're logged in.
 
-## Claude AI Integration Setup
+## Development Workflow with Claude CLI
 
-Enable Claude to automatically respond to GitHub issue comments and implement features:
+This project uses Claude Code CLI for rapid feature development:
 
-### 1. Get Anthropic API Key
+### Recommended Workflow
 
-1. Visit: https://console.anthropic.com/settings/keys
-2. Sign in or create an account
-3. Click **"Create Key"**
-4. Copy the API key (you won't be able to view it again)
+1. **Create GitHub Issue**
+   ```bash
+   gh issue create --title "Feature name" --body "Description"
+   ```
 
-### 2. Add API Key to Repository Secrets
+2. **Work with Claude CLI**
+   - Use Claude Code in your terminal/IDE
+   - Reference the issue: "Implement feature from issue #X"
+   - Claude will read code, implement changes, and create commits
 
-1. Go to your repository settings: `https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions`
-2. Click **"New repository secret"**
-3. Enter:
-   - Name: `ANTHROPIC_API_KEY`
-   - Secret: (paste your API key)
-4. Click **"Add secret"**
+3. **Review and Merge**
+   ```bash
+   gh pr create --title "..." --body "Closes #X"
+   gh pr merge --squash
+   ```
 
-### 3. Verify Claude Workflow
+### Example Session
 
-The `.github/workflows/claude-assistant.yml` file should already be in your repository.
-
-If not, ensure it's committed:
 ```bash
-git add .github/workflows/claude-assistant.yml
-git commit -m "Add Claude GitHub Actions integration"
-git push
+# Create issue
+gh issue create --title "Add dark mode" --body "Toggle between light/dark themes"
+
+# In Claude CLI session:
+# "Implement dark mode feature from issue #X"
+# Claude reads index.html, implements the feature, commits changes
+
+# Create and merge PR
+gh pr create --title "Add dark mode toggle" --body "Closes #X"
+gh pr merge --squash
 ```
 
-### 4. Using Claude via GitHub Comments
+### Benefits of CLI Workflow
 
-Once set up, you can interact with Claude directly from GitHub:
+✅ **Fast**: Features implemented in 2-3 minutes
+✅ **Reliable**: Direct file access and git operations
+✅ **Flexible**: Full conversation context for complex changes
+✅ **Tested**: Every feature in this repo built this way
 
-1. **Create an issue** or comment on an existing one
-2. **Mention Claude** in your comment:
-   ```
-   @claude Can you work on this?
-   ```
-   or
-   ```
-   @claude Please implement this feature
-   ```
-3. **Claude will automatically:**
-   - Respond to your comment within minutes
-   - Analyze the issue
-   - Implement requested features or fixes
-   - Create branches and pull requests as needed
+### Alternative: GitHub Actions (Experimental)
 
-**Example Workflow:**
-```markdown
-Issue: Add search functionality
-
-Comment: @claude Can you add a search feature to filter tasks?
-
-Claude will:
-1. Respond with implementation plan
-2. Create a feature branch
-3. Implement the search functionality
-4. Create a pull request for review
-```
+Basic GitHub Actions integration exists for simple notifications:
+- Workflow triggers on `@claude` mentions in issues
+- Currently posts acknowledgment comments
+- Full automation implementation in progress
 
 ## Project Structure
 
@@ -267,61 +257,36 @@ git push
 
 The GitHub Actions workflow will automatically deploy your changes to GitHub Pages.
 
-### Option 2: GitHub Issues + GitHub CLI
+### Option 2: GitHub Issues + Claude CLI (Recommended)
 
-Using GitHub CLI for feature development:
+The fastest way to add features - using GitHub CLI + Claude Code:
 
 ```bash
-# Create an issue
-gh issue create --title "Feature name" --body "Description"
+# 1. Create an issue
+gh issue create --title "Add search feature" --body "Search tasks by keyword"
 
-# List open issues
-gh issue list
+# 2. Use Claude CLI to implement
+# In your Claude Code session, say:
+# "Implement the search feature from issue #X"
 
-# Create a branch from an issue
-gh issue develop 123 --checkout
+# 3. Claude will:
+#    - Read current code
+#    - Implement the feature
+#    - Create branch and commit
+#    - Push changes
 
-# Make your changes, then commit
-git add .
-git commit -m "Implement feature"
-
-# Push and create PR
-git push -u origin feature-branch
-gh pr create --title "PR title" --body "Description"
-
-# Merge PR when ready
-gh pr merge 123 --squash
+# 4. Create and merge PR
+gh pr create --title "Add search feature" --body "Closes #X"
+gh pr merge --squash
 ```
 
-### Option 3: Claude AI Automation (Recommended)
+**This is how all features in this repo were built:**
+- Due dates feature
+- Priority levels
+- Filter/sort functionality
+- Footer with timestamp
 
-The fastest way to add features:
-
-1. **Create an issue on GitHub:**
-   - Go to: `https://github.com/YOUR_USERNAME/YOUR_REPO/issues/new`
-   - Describe the feature or bug
-
-2. **Mention Claude in a comment:**
-   ```
-   @claude Can you implement this?
-   ```
-
-3. **Claude automatically:**
-   - Analyzes the issue
-   - Creates a feature branch
-   - Implements the changes
-   - Creates a pull request
-   - Responds with a summary
-
-4. **Review and merge:**
-   ```bash
-   # Via CLI
-   gh pr merge PULL_NUMBER --squash
-
-   # Or via GitHub web interface
-   ```
-
-5. **Changes auto-deploy** to GitHub Pages!
+**Time per feature:** 2-5 minutes from issue to live deployment
 
 ## Useful GitHub CLI Commands
 
