@@ -166,6 +166,36 @@
             font-size: 16px;
         }
 
+        .due-date {
+            font-size: 14px;
+            color: #6b7280;
+            margin-left: 12px;
+            white-space: nowrap;
+        }
+
+        .due-date.overdue {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .due-date.upcoming {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        input[type="date"] {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .delete-item-btn {
             background: transparent;
             color: #ef4444;
@@ -232,6 +262,29 @@
             localStorage.setItem('todoFolders', JSON.stringify(folders));
         }
 
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Get due date class based on urgency
+        function getDueDateClass(dateString) {
+            if (!dateString) return '';
+            const dueDate = new Date(dateString);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
+
+            const diffTime = dueDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) return 'overdue';
+            if (diffDays <= 3) return 'upcoming';
+            return '';
+        }
+
         // Render all folders
         function renderFolders() {
             const container = document.getElementById('foldersContainer');
@@ -250,6 +303,7 @@
                     <div class="folder-content">
                         <div class="add-item-section">
                             <input type="text" id="itemInput${folderIndex}" placeholder="Add a new task..." />
+                            <input type="date" id="dateInput${folderIndex}" />
                             <button onclick="addItem(${folderIndex})">Add</button>
                         </div>
                         <ul class="todo-list">
@@ -261,6 +315,7 @@
                                                ${item.completed ? 'checked' : ''}
                                                onchange="toggleItem(${folderIndex}, ${itemIndex})" />
                                         <span class="todo-text">${item.text}</span>
+                                        ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
                                         <button class="delete-item-btn" onclick="deleteItem(${folderIndex}, ${itemIndex})">&times;</button>
                                     </li>
                                 `).join('')
@@ -303,7 +358,9 @@
         // Add a new item to a folder
         function addItem(folderIndex) {
             const input = document.getElementById(`itemInput${folderIndex}`);
+            const dateInput = document.getElementById(`dateInput${folderIndex}`);
             const itemText = input.value.trim();
+            const dueDate = dateInput.value;
 
             if (itemText === '') {
                 alert('Please enter a task');
@@ -312,10 +369,12 @@
 
             folders[folderIndex].items.push({
                 text: itemText,
-                completed: false
+                completed: false,
+                dueDate: dueDate || null
             });
 
             input.value = '';
+            dateInput.value = '';
             saveData();
             renderFolders();
         }
@@ -343,8 +402,8 @@
 
         // Allow Enter key to add items (delegated event)
         document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && e.target.id.startsWith('itemInput')) {
-                const folderIndex = parseInt(e.target.id.replace('itemInput', ''));
+            if (e.key === 'Enter' && (e.target.id.startsWith('itemInput') || e.target.id.startsWith('dateInput'))) {
+                const folderIndex = parseInt(e.target.id.replace(/[^\d]/g, ''));
                 addItem(folderIndex);
             }
         });
