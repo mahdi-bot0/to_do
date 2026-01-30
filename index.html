@@ -183,17 +183,71 @@
             font-weight: 600;
         }
 
-        input[type="date"] {
+        input[type="date"],
+        select {
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 5px;
             font-size: 16px;
             transition: border-color 0.3s;
+            background: white;
         }
 
-        input[type="date"]:focus {
+        input[type="date"]:focus,
+        select:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            white-space: nowrap;
+        }
+
+        .priority-badge.high {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .priority-badge.medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .priority-badge.low {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .priority-select {
+            min-width: 120px;
+        }
+
+        .filter-sort-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-sort-section label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-right: 5px;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .delete-item-btn {
@@ -230,6 +284,41 @@
 
             button {
                 width: 100%;
+            }
+
+            .add-item-section {
+                flex-direction: column;
+            }
+
+            .priority-select {
+                width: 100%;
+            }
+
+            .filter-sort-section {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-group select {
+                flex: 1;
+            }
+
+            .todo-item {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .todo-text {
+                flex-basis: 100%;
+                order: -1;
+            }
+
+            .priority-badge {
+                margin-left: 0;
+                font-size: 11px;
             }
         }
     </style>
@@ -289,6 +378,73 @@
             return '';
         }
 
+        // Get priority badge HTML
+        function getPriorityBadge(priority, folderIndex, itemIndex) {
+            const priorityEmoji = {
+                high: '🔴',
+                medium: '🟡',
+                low: '🟢'
+            };
+            const priorityLabel = {
+                high: 'High',
+                medium: 'Medium',
+                low: 'Low'
+            };
+            const priorityValue = priority || 'medium';
+            return `<select class="priority-badge ${priorityValue}" onchange="changePriority(${folderIndex}, ${itemIndex}, this.value)">
+                        <option value="high" ${priorityValue === 'high' ? 'selected' : ''}>${priorityEmoji.high} High</option>
+                        <option value="medium" ${priorityValue === 'medium' ? 'selected' : ''}>${priorityEmoji.medium} Medium</option>
+                        <option value="low" ${priorityValue === 'low' ? 'selected' : ''}>${priorityEmoji.low} Low</option>
+                    </select>`;
+        }
+
+        // Change priority of an existing item
+        function changePriority(folderIndex, itemIndex, newPriority) {
+            folders[folderIndex].items[itemIndex].priority = newPriority;
+            saveData();
+            renderFolders();
+        }
+
+        // Get filtered and sorted items
+        function getFilteredAndSortedItems(items, folderIndex) {
+            // Get filter and sort values
+            const filterSelect = document.getElementById(`filterPriority${folderIndex}`);
+            const sortSelect = document.getElementById(`sortPriority${folderIndex}`);
+            const filterValue = filterSelect ? filterSelect.value : 'all';
+            const sortValue = sortSelect ? sortSelect.value : 'none';
+
+            // Add original index to items
+            let itemsWithIndex = items.map((item, index) => ({
+                ...item,
+                originalIndex: index
+            }));
+
+            // Filter by priority
+            if (filterValue !== 'all') {
+                itemsWithIndex = itemsWithIndex.filter(item => (item.priority || 'medium') === filterValue);
+            }
+
+            // Sort items
+            if (sortValue === 'priority') {
+                const priorityOrder = { high: 0, medium: 1, low: 2 };
+                itemsWithIndex.sort((a, b) => {
+                    const priorityA = priorityOrder[a.priority || 'medium'];
+                    const priorityB = priorityOrder[b.priority || 'medium'];
+                    return priorityA - priorityB;
+                });
+            } else if (sortValue === 'date') {
+                itemsWithIndex.sort((a, b) => {
+                    // Items without dates go to the end
+                    if (!a.dueDate && !b.dueDate) return 0;
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    return new Date(a.dueDate) - new Date(b.dueDate);
+                });
+            }
+
+            return itemsWithIndex;
+        }
+
         // Render all folders
         function renderFolders() {
             const container = document.getElementById('foldersContainer');
@@ -308,19 +464,44 @@
                         <div class="add-item-section">
                             <input type="text" id="itemInput${folderIndex}" placeholder="Add a new task..." />
                             <input type="date" id="dateInput${folderIndex}" />
+                            <select id="priorityInput${folderIndex}" class="priority-select">
+                                <option value="low">Low Priority</option>
+                                <option value="medium" selected>Medium Priority</option>
+                                <option value="high">High Priority</option>
+                            </select>
                             <button onclick="addItem(${folderIndex})">Add</button>
                         </div>
+                        <div class="filter-sort-section">
+                            <div class="filter-group">
+                                <label>Filter:</label>
+                                <select id="filterPriority${folderIndex}" onchange="renderFolders()">
+                                    <option value="all">All Priorities</option>
+                                    <option value="high">High Only</option>
+                                    <option value="medium">Medium Only</option>
+                                    <option value="low">Low Only</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Sort:</label>
+                                <select id="sortPriority${folderIndex}" onchange="renderFolders()">
+                                    <option value="none">Default Order</option>
+                                    <option value="priority">By Priority</option>
+                                    <option value="date">By Due Date</option>
+                                </select>
+                            </div>
+                        </div>
                         <ul class="todo-list">
-                            ${folder.items.length === 0 ?
-                                '<div class="empty-state">No tasks yet</div>' :
-                                folder.items.map((item, itemIndex) => `
+                            ${getFilteredAndSortedItems(folder.items, folderIndex).length === 0 ?
+                                '<div class="empty-state">No tasks match the current filter</div>' :
+                                getFilteredAndSortedItems(folder.items, folderIndex).map((item) => `
                                     <li class="todo-item ${item.completed ? 'completed' : ''}">
                                         <input type="checkbox" class="checkbox"
                                                ${item.completed ? 'checked' : ''}
-                                               onchange="toggleItem(${folderIndex}, ${itemIndex})" />
+                                               onchange="toggleItem(${folderIndex}, ${item.originalIndex})" />
                                         <span class="todo-text">${item.text}</span>
+                                        ${getPriorityBadge(item.priority, folderIndex, item.originalIndex)}
                                         ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                        <button class="delete-item-btn" onclick="deleteItem(${folderIndex}, ${itemIndex})">&times;</button>
+                                        <button class="delete-item-btn" onclick="deleteItem(${folderIndex}, ${item.originalIndex})">&times;</button>
                                     </li>
                                 `).join('')
                             }
@@ -363,8 +544,10 @@
         function addItem(folderIndex) {
             const input = document.getElementById(`itemInput${folderIndex}`);
             const dateInput = document.getElementById(`dateInput${folderIndex}`);
+            const priorityInput = document.getElementById(`priorityInput${folderIndex}`);
             const itemText = input.value.trim();
             const dueDate = dateInput.value;
+            const priority = priorityInput.value;
 
             if (itemText === '') {
                 alert('Please enter a task');
@@ -374,11 +557,13 @@
             folders[folderIndex].items.push({
                 text: itemText,
                 completed: false,
-                dueDate: dueDate || null
+                dueDate: dueDate || null,
+                priority: priority
             });
 
             input.value = '';
             dateInput.value = '';
+            priorityInput.value = 'medium';
             saveData();
             renderFolders();
         }
@@ -406,7 +591,7 @@
 
         // Allow Enter key to add items (delegated event)
         document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && (e.target.id.startsWith('itemInput') || e.target.id.startsWith('dateInput'))) {
+            if (e.key === 'Enter' && (e.target.id.startsWith('itemInput') || e.target.id.startsWith('dateInput') || e.target.id.startsWith('priorityInput'))) {
                 const folderIndex = parseInt(e.target.id.replace(/[^\d]/g, ''));
                 addItem(folderIndex);
             }
