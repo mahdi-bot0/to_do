@@ -265,14 +265,18 @@
         // Format date for display
         function formatDate(dateString) {
             if (!dateString) return '';
-            const date = new Date(dateString);
+            // Parse date string as local date to avoid timezone issues
+            const [year, month, day] = dateString.split('-');
+            const date = new Date(year, month - 1, day);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
         // Get due date class based on urgency
         function getDueDateClass(dateString) {
             if (!dateString) return '';
-            const dueDate = new Date(dateString);
+            // Parse date string as local date to avoid timezone issues
+            const [year, month, day] = dateString.split('-');
+            const dueDate = new Date(year, month - 1, day);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             dueDate.setHours(0, 0, 0, 0);
