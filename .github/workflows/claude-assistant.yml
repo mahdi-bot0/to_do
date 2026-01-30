@@ -30,6 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm install @anthropic-ai/sdk
 
+      - name: Install GitHub CLI
+        run: |
+          type gh || brew install gh || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+          sudo apt update && \
+          sudo apt install gh -y)
+
       - name: Configure Git
         run: |
           git config user.name "Claude Assistant"
@@ -172,20 +180,31 @@ jobs:
 
           // Process tool calls
           function processTool(toolName, toolInput) {
-            console.log(`Executing tool: ${toolName}`, toolInput);
+            console.log(`\n========================================`);
+            console.log(`EXECUTING TOOL: ${toolName}`);
+            console.log(`Input:`, JSON.stringify(toolInput, null, 2));
+            console.log(`========================================\n`);
 
+            let result;
             switch(toolName) {
               case 'read_file':
-                return readFile(toolInput.file_path);
+                result = readFile(toolInput.file_path);
+                break;
               case 'write_file':
-                return writeFile(toolInput.file_path, toolInput.content);
+                result = writeFile(toolInput.file_path, toolInput.content);
+                break;
               case 'edit_file':
-                return editFile(toolInput.file_path, toolInput.old_string, toolInput.new_string);
+                result = editFile(toolInput.file_path, toolInput.old_string, toolInput.new_string);
+                break;
               case 'run_command':
-                return exec(toolInput.command);
+                result = exec(toolInput.command);
+                break;
               default:
-                return `Unknown tool: ${toolName}`;
+                result = `ERROR: Unknown tool: ${toolName}`;
             }
+
+            console.log(`\nTool result preview:`, result.substring(0, 200));
+            return result;
           }
 
           async function main() {
@@ -200,56 +219,94 @@ jobs:
 
             console.log('Starting Claude Assistant...');
 
-            const systemPrompt = `You are Claude, an AI assistant integrated with GitHub Actions. You can read files, edit files, and run commands to implement features and fix bugs.
+            const systemPrompt = `You are Claude, an AI assistant integrated with GitHub Actions with TOOL USE capabilities. You MUST use the provided tools to read files, edit files, and run commands.
+
+CRITICAL: You have access to actual tools via the Anthropic tool use API. Do NOT generate pseudo-code or XML tags. Use the real tools provided.
 
 Repository: ${process.env.REPO_NAME}
-Current branch: main
+Current branch: main (you're in the repository root directory)
 
-You have access to these tools:
-- read_file: Read file contents
-- write_file: Create or overwrite files
-- edit_file: Replace strings in files
-- run_command: Execute shell commands (git, ls, etc.)
+AVAILABLE TOOLS (use these via tool calls, NOT pseudo-code):
 
-Your workflow:
-1. Read relevant files to understand the codebase
-2. Implement the requested changes
-3. Create a feature branch (use format: feature/issue-${issueNumber}-short-name)
-4. Commit your changes with a descriptive message
-5. Push the branch
-6. Create a pull request using gh CLI
-7. Summarize what you did
+1. read_file - Read a file's contents
+   Parameters: { "file_path": "path/to/file" }
+   Use this to understand the current code before making changes.
 
-Be thorough and implement complete, working solutions. Always create a branch, never commit directly to main.`;
+2. edit_file - Replace a string in a file
+   Parameters: { "file_path": "path/to/file", "old_string": "exact text to replace", "new_string": "replacement text" }
+   Use this to make precise edits. The old_string must match exactly.
 
-            const userPrompt = `Issue #${issueNumber}: ${issueTitle}
+3. write_file - Create or completely overwrite a file
+   Parameters: { "file_path": "path/to/file", "content": "entire file content" }
+   Use this cautiously - it overwrites the entire file.
 
-Issue Description:
+4. run_command - Execute a shell command
+   Parameters: { "command": "shell command" }
+   Use this for git operations, creating branches, pushing, etc.
+
+IMPORTANT WORKFLOW:
+1. Start by reading index.html using read_file
+2. Create a feature branch: run_command with "git checkout -b feature/issue-${issueNumber}-short-name"
+3. Make code changes using edit_file (preferred) or write_file
+4. Commit: run_command with "git add index.html && git commit -m 'description'"
+5. Push: run_command with "git push -u origin BRANCH_NAME"
+6. Create PR: run_command with "gh pr create --title '...' --body 'Closes #${issueNumber}'"
+7. After all tools complete, provide a final summary
+
+RULES:
+- ALWAYS use run_command for git operations, NEVER generate bash pseudo-code
+- Use edit_file for surgical changes, write_file only if rewriting entire file
+- Create descriptive commit messages
+- Test your implementation logic before committing
+- Provide a clear summary at the end
+
+You are running in GitHub Actions with full git and gh CLI access.`;
+
+            const userPrompt = `A user has requested help with the following issue:
+
+Issue #${issueNumber}: ${issueTitle}
+
+Description:
 ${issueBody}
 
-User Request:
+User Comment:
 ${commentBody}
 
-Please implement this feature or fix. Follow the workflow:
-1. Read index.html to understand current structure
-2. Create a feature branch
-3. Make necessary code changes
-4. Test mentally to ensure it works
-5. Commit with a good message
-6. Push the branch
-7. Create a PR using: gh pr create --title "..." --body "Closes #${issueNumber}"
-8. Provide a summary
+TASK: Implement this feature or fix this bug using your tools.
 
-Start by reading the main file.`;
+STEP-BY-STEP INSTRUCTIONS (follow exactly):
+
+1. Use read_file tool to read "index.html"
+2. Use run_command tool: "git checkout -b feature/issue-${issueNumber}-priority-levels"
+3. Use edit_file tool to make the necessary code changes
+   (make multiple edit_file calls if needed for different sections)
+4. Use run_command tool: "git add index.html"
+5. Use run_command tool: "git commit -m 'Add feature for issue #${issueNumber}\\n\\nCloses #${issueNumber}'"
+6. Use run_command tool: "git push -u origin BRANCH_NAME"
+7. Use run_command tool: "gh pr create --title 'TITLE' --body 'Closes #${issueNumber}'"
+8. Provide a final text summary of what you implemented
+
+IMPORTANT:
+- Use the actual tools (read_file, edit_file, run_command)
+- Do NOT write pseudo-code or XML tags
+- Each step above should be a real tool call
+- After pushing and creating PR, stop and provide summary
+
+Begin by using the read_file tool to read index.html.`;
 
             const messages = [{ role: 'user', content: userPrompt }];
             let continueLoop = true;
             let iterationCount = 0;
             const maxIterations = 25;
 
+            // Post initial comment to let user know we're working
+            postComment('🤖 Claude Assistant is working on this issue...\n\nI\'ll implement the requested changes and create a pull request. This may take 2-3 minutes.');
+
             while (continueLoop && iterationCount < maxIterations) {
               iterationCount++;
-              console.log(`\nIteration ${iterationCount}...`);
+              console.log(`\n${'='.repeat(60)}`);
+              console.log(`ITERATION ${iterationCount}/${maxIterations}`);
+              console.log('='.repeat(60));
 
               const response = await anthropic.messages.create({
                 model: 'claude-sonnet-4-5-20250929',
