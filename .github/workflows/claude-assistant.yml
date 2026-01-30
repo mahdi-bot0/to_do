@@ -1,0 +1,117 @@
+name: Claude Assistant
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  claude-respond:
+    # Only run if comment mentions @claude
+    if: contains(github.event.comment.body, '@claude') || contains(github.event.comment.body, '@Claude')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Anthropic SDK
+        run: npm install @anthropic-ai/sdk
+
+      - name: Call Claude API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          node << 'EOF'
+          const Anthropic = require('@anthropic-ai/sdk');
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+
+          async function main() {
+            const anthropic = new Anthropic({
+              apiKey: process.env.ANTHROPIC_API_KEY,
+            });
+
+            const issueNumber = process.env.ISSUE_NUMBER;
+            const issueTitle = process.env.ISSUE_TITLE;
+            const issueBody = process.env.ISSUE_BODY;
+            const commentBody = process.env.COMMENT_BODY;
+
+            // Configure git
+            execSync('git config user.name "Claude Assistant"');
+            execSync('git config user.email "claude-assistant@anthropic.com"');
+
+            const prompt = `You are Claude, an AI assistant helping with a GitHub repository. A user has mentioned you in an issue comment.
+
+          Repository: ${process.env.REPO_NAME}
+          Issue #${issueNumber}: ${issueTitle}
+
+          Issue Description:
+          ${issueBody}
+
+          User Comment:
+          ${commentBody}
+
+          Please analyze the issue and comment, then:
+          1. Respond with what you plan to do
+          2. If it's a bug fix or feature request, implement it
+          3. Create a branch, make changes, and push
+          4. Provide a summary of what you did
+
+          You have access to the repository files. The main application is in index.html.`;
+
+            console.log('Calling Claude API...');
+
+            const message = await anthropic.messages.create({
+              model: 'claude-sonnet-4-5-20250929',
+              max_tokens: 8000,
+              messages: [{
+                role: 'user',
+                content: prompt
+              }]
+            });
+
+            const response = message.content[0].text;
+            console.log('Claude response:', response);
+
+            // Post response as a comment
+            const commentPayload = {
+              body: response + '\n\n---\n🤖 *Automated response from Claude via GitHub Actions*'
+            };
+
+            execSync(`curl -X POST \
+              -H "Authorization: token ${process.env.GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${process.env.REPO_NAME}/issues/${issueNumber}/comments \
+              -d '${JSON.stringify(commentPayload).replace(/'/g, "'\\''")}'`);
+
+            console.log('Response posted to issue');
+          }
+
+          main().catch(console.error);
+          EOF
+
+      - name: Push changes if any
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Auto-fix by Claude Assistant for issue #${{ github.event.issue.number }}" || true
+            git push || true
+          fi
