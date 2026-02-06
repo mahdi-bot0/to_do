@@ -314,6 +314,37 @@
             min-width: 120px;
         }
 
+        .tag-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 4px;
+            margin-right: 2px;
+            cursor: pointer;
+            transition: opacity 0.3s, transform 0.2s;
+            white-space: nowrap;
+        }
+
+        .tag-badge:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .tags-container {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: center;
+            margin-left: 8px;
+        }
+
+        .tags-input {
+            flex: 1;
+            min-width: 150px;
+        }
+
         .filter-sort-section {
             display: flex;
             gap: 10px;
@@ -518,6 +549,15 @@
                 flex-basis: 100%;
                 order: -2;
             }
+
+            .tags-input {
+                min-width: 100%;
+            }
+
+            .tags-container {
+                margin-left: 0;
+                margin-top: 4px;
+            }
         }
     </style>
 </head>
@@ -591,6 +631,7 @@
         // Load data from localStorage or initialize empty
         let folders = JSON.parse(localStorage.getItem('todoFolders')) || [];
         let currentSearchQuery = '';
+        let currentTagFilter = '';
 
         // Save data to localStorage
         function saveData() {
@@ -651,12 +692,85 @@
             renderFolders();
         }
 
+        // Generate consistent color for a tag using hash function
+        function getTagColor(tag) {
+            let hash = 0;
+            for (let i = 0; i < tag.length; i++) {
+                hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+            }
+
+            // Generate HSL color with good saturation and lightness
+            const hue = Math.abs(hash % 360);
+            const saturation = 65 + (Math.abs(hash) % 20); // 65-85%
+            const lightness = 45 + (Math.abs(hash >> 8) % 15); // 45-60%
+
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        // Get contrasting text color for a background color
+        function getContrastColor(bgColor) {
+            // For HSL colors, check lightness
+            const lightnessMatch = bgColor.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%\)/);
+            if (lightnessMatch) {
+                const lightness = parseInt(lightnessMatch[1]);
+                return lightness > 50 ? '#000000' : '#ffffff';
+            }
+            return '#ffffff';
+        }
+
+        // Parse tags from input string
+        function parseTags(tagsString) {
+            if (!tagsString) return [];
+            // Split by comma or space, trim, remove empty strings, and convert to lowercase
+            return tagsString
+                .split(/[,\s]+/)
+                .map(tag => tag.trim().toLowerCase())
+                .filter(tag => tag.length > 0);
+        }
+
+        // Render tag badges HTML
+        function renderTagBadges(tags) {
+            if (!tags || tags.length === 0) return '';
+
+            return `<span class="tags-container">${tags.map(tag => {
+                const bgColor = getTagColor(tag);
+                const textColor = getContrastColor(bgColor);
+                return `<span class="tag-badge"
+                             style="background-color: ${bgColor}; color: ${textColor};"
+                             onclick="filterByTag('${tag}')"
+                             title="Click to filter by this tag">${tag}</span>`;
+            }).join('')}</span>`;
+        }
+
+        // Filter tasks by tag
+        function filterByTag(tag) {
+            currentTagFilter = tag;
+            // Clear search when filtering by tag
+            const searchInput = document.getElementById('globalSearch');
+            if (searchInput.value) {
+                clearSearch();
+            }
+            renderFolders();
+
+            // Show notification
+            const searchInfo = document.getElementById('searchResultsInfo');
+            searchInfo.textContent = `Filtering by tag: ${tag}`;
+        }
+
+        // Clear tag filter
+        function clearTagFilter() {
+            currentTagFilter = '';
+            renderFolders();
+        }
+
         // Get filtered and sorted items
         function getFilteredAndSortedItems(items, folderIndex) {
             // Get filter and sort values
             const filterSelect = document.getElementById(`filterPriority${folderIndex}`);
+            const filterTagSelect = document.getElementById(`filterTag${folderIndex}`);
             const sortSelect = document.getElementById(`sortPriority${folderIndex}`);
             const filterValue = filterSelect ? filterSelect.value : 'all';
+            const filterTagValue = filterTagSelect ? filterTagSelect.value : 'all';
             const sortValue = sortSelect ? sortSelect.value : 'none';
 
             // Add original index to items
@@ -668,6 +782,13 @@
             // Filter by priority
             if (filterValue !== 'all') {
                 itemsWithIndex = itemsWithIndex.filter(item => (item.priority || 'medium') === filterValue);
+            }
+
+            // Filter by tag
+            if (filterTagValue !== 'all') {
+                itemsWithIndex = itemsWithIndex.filter(item =>
+                    item.tags && item.tags.includes(filterTagValue)
+                );
             }
 
             // Sort items
@@ -689,6 +810,19 @@
             }
 
             return itemsWithIndex;
+        }
+
+        // Get all unique tags from all folders
+        function getAllTags() {
+            const tagsSet = new Set();
+            folders.forEach(folder => {
+                folder.items.forEach(item => {
+                    if (item.tags) {
+                        item.tags.forEach(tag => tagsSet.add(tag));
+                    }
+                });
+            });
+            return Array.from(tagsSet).sort();
         }
 
         // Highlight matching text in search results
@@ -739,7 +873,7 @@
 
             if (folders.length === 0) {
                 container.innerHTML = '<div class="empty-state">No folders yet. Create one to get started!</div>';
-                if (currentSearchQuery) {
+                if (currentSearchQuery || currentTagFilter) {
                     searchInfo.textContent = '';
                 }
                 return;
@@ -772,24 +906,50 @@
                 } else {
                     searchInfo.textContent = `Found ${totalMatches} task${totalMatches !== 1 ? 's' : ''} matching "${currentSearchQuery}"`;
                 }
+            } else if (currentTagFilter) {
+                // Filter by tag
+                foldersToDisplay = folders.map((folder, folderIndex) => {
+                    const matchingItems = folder.items.filter(item =>
+                        item.tags && item.tags.includes(currentTagFilter)
+                    );
+                    totalMatches += matchingItems.length;
+                    return {
+                        ...folder,
+                        items: matchingItems,
+                        originalIndex: folderIndex,
+                        hasMatches: matchingItems.length > 0
+                    };
+                }).filter(folder => folder.hasMatches);
+
+                // Update search results info
+                if (totalMatches === 0) {
+                    searchInfo.innerHTML = `No results found for tag "${currentTagFilter}" <button onclick="clearTagFilter()" style="background: transparent; color: var(--text-secondary); text-decoration: underline; padding: 0; margin-left: 8px;">Clear filter</button>`;
+                    container.innerHTML = '<div class="no-results">No tasks have this tag. Try a different tag.</div>';
+                    return;
+                } else {
+                    searchInfo.innerHTML = `Found ${totalMatches} task${totalMatches !== 1 ? 's' : ''} with tag "${currentTagFilter}" <button onclick="clearTagFilter()" style="background: transparent; color: var(--text-secondary); text-decoration: underline; padding: 0; margin-left: 8px;">Clear filter</button>`;
+                }
             } else {
                 searchInfo.textContent = '';
             }
 
+            const allTags = getAllTags();
+
             container.innerHTML = foldersToDisplay.map((folder) => {
-                const folderIndex = currentSearchQuery ? folder.originalIndex : foldersToDisplay.indexOf(folder);
-                const actualFolderIndex = currentSearchQuery ? folder.originalIndex : folderIndex;
+                const folderIndex = (currentSearchQuery || currentTagFilter) ? folder.originalIndex : foldersToDisplay.indexOf(folder);
+                const actualFolderIndex = (currentSearchQuery || currentTagFilter) ? folder.originalIndex : folderIndex;
 
                 return `
                 <div class="folder">
                     <div class="folder-header">
                         <h2>${folder.name}</h2>
-                        ${!currentSearchQuery ? `<button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>` : ''}
+                        ${!(currentSearchQuery || currentTagFilter) ? `<button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>` : ''}
                     </div>
                     <div class="folder-content">
-                        ${!currentSearchQuery ? `
+                        ${!(currentSearchQuery || currentTagFilter) ? `
                         <div class="add-item-section">
                             <input type="text" id="itemInput${actualFolderIndex}" placeholder="Add a new task..." />
+                            <input type="text" id="tagsInput${actualFolderIndex}" class="tags-input" placeholder="Tags (comma or space separated)..." />
                             <input type="date" id="dateInput${actualFolderIndex}" />
                             <select id="priorityInput${actualFolderIndex}" class="priority-select">
                                 <option value="low">Low Priority</option>
@@ -800,7 +960,7 @@
                         </div>
                         <div class="filter-sort-section">
                             <div class="filter-group">
-                                <label>Filter:</label>
+                                <label>Priority:</label>
                                 <select id="filterPriority${actualFolderIndex}" onchange="renderFolders()">
                                     <option value="all">All Priorities</option>
                                     <option value="high">High Only</option>
@@ -808,6 +968,15 @@
                                     <option value="low">Low Only</option>
                                 </select>
                             </div>
+                            ${allTags.length > 0 ? `
+                            <div class="filter-group">
+                                <label>Tag:</label>
+                                <select id="filterTag${actualFolderIndex}" onchange="renderFolders()">
+                                    <option value="all">All Tags</option>
+                                    ${allTags.map(tag => `<option value="${tag}">${tag}</option>`).join('')}
+                                </select>
+                            </div>
+                            ` : ''}
                             <div class="filter-group">
                                 <label>Sort:</label>
                                 <select id="sortPriority${actualFolderIndex}" onchange="renderFolders()">
@@ -819,8 +988,8 @@
                         </div>
                         ` : ''}
                         <ul class="todo-list">
-                            ${currentSearchQuery ?
-                                // Search mode: show matching items with highlights
+                            ${(currentSearchQuery || currentTagFilter) ?
+                                // Search/filter mode: show matching items with highlights
                                 folder.items.map((item) => {
                                     const itemIndex = folders[actualFolderIndex].items.indexOf(folders[actualFolderIndex].items.find(i => i.text === item.text && i.completed === item.completed));
                                     return `
@@ -829,7 +998,8 @@
                                                ${item.completed ? 'checked' : ''}
                                                onchange="toggleItem(${actualFolderIndex}, ${itemIndex})" />
                                         <span class="folder-name-badge">${folder.name}</span>
-                                        <span class="todo-text">${highlightText(item.text, currentSearchQuery)}</span>
+                                        <span class="todo-text">${currentSearchQuery ? highlightText(item.text, currentSearchQuery) : item.text}</span>
+                                        ${renderTagBadges(item.tags)}
                                         ${getPriorityBadge(item.priority, actualFolderIndex, itemIndex)}
                                         ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
                                         <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${itemIndex})">&times;</button>
@@ -845,6 +1015,7 @@
                                                    ${item.completed ? 'checked' : ''}
                                                    onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})" />
                                             <span class="todo-text">${item.text}</span>
+                                            ${renderTagBadges(item.tags)}
                                             ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
                                             ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
                                             <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
@@ -890,9 +1061,11 @@
         // Add a new item to a folder
         function addItem(folderIndex) {
             const input = document.getElementById(`itemInput${folderIndex}`);
+            const tagsInput = document.getElementById(`tagsInput${folderIndex}`);
             const dateInput = document.getElementById(`dateInput${folderIndex}`);
             const priorityInput = document.getElementById(`priorityInput${folderIndex}`);
             const itemText = input.value.trim();
+            const tagsText = tagsInput ? tagsInput.value.trim() : '';
             const dueDate = dateInput.value;
             const priority = priorityInput.value;
 
@@ -901,14 +1074,18 @@
                 return;
             }
 
+            const tags = parseTags(tagsText);
+
             folders[folderIndex].items.push({
                 text: itemText,
                 completed: false,
                 dueDate: dueDate || null,
-                priority: priority
+                priority: priority,
+                tags: tags
             });
 
             input.value = '';
+            if (tagsInput) tagsInput.value = '';
             dateInput.value = '';
             priorityInput.value = 'medium';
             saveData();
@@ -938,7 +1115,7 @@
 
         // Allow Enter key to add items (delegated event)
         document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && (e.target.id.startsWith('itemInput') || e.target.id.startsWith('dateInput') || e.target.id.startsWith('priorityInput'))) {
+            if (e.key === 'Enter' && (e.target.id.startsWith('itemInput') || e.target.id.startsWith('tagsInput') || e.target.id.startsWith('dateInput') || e.target.id.startsWith('priorityInput'))) {
                 const folderIndex = parseInt(e.target.id.replace(/[^\d]/g, ''));
                 addItem(folderIndex);
             }
