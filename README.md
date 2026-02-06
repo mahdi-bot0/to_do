@@ -6,32 +6,254 @@ A user-friendly todo list application with folder organization, checklist functi
 
 ## Features
 
-- 📁 Create multiple folders to organize your todos
-- ✅ Add, check, and delete checklist items
-- 📅 Set due dates for tasks with visual urgency indicators
-- 🎯 Priority levels (high/medium/low) with color-coded badges
-- 🔍 Filter and sort tasks by priority or due date
-- 💾 Persistent storage using localStorage
-- 🎨 Clean, modern, responsive design
-- 🚀 No dependencies - just open and use
-- 🤖 Claude CLI integration for rapid feature development
+- 📁 **Folder Organization**: Create multiple folders to organize your todos
+- ✅ **Task Management**: Add, check, and delete checklist items
+- 📅 **Due Dates**: Set due dates with visual urgency indicators (overdue/upcoming)
+- 🎯 **Priority Levels**: High/medium/low priorities with color-coded badges
+- 🏷️ **Custom Tags**: Add and filter tasks by custom tags/labels
+- 📝 **Task Notes**: Add detailed descriptions and notes to any task
+- 🔍 **Global Search**: Search across all tasks in all folders
+- 🎨 **Filter & Sort**: Filter by priority or tag, sort by priority or due date
+- 🌙 **Dark Mode**: Toggle between light and dark themes with persistence
+- 📥 **Export/Import**: Backup and restore your data as JSON files
+- 💾 **Auto-Save**: All data persists in browser localStorage
+- 📱 **Responsive Design**: Works perfectly on mobile and desktop
+- 🚀 **No Dependencies**: Pure HTML/CSS/JavaScript - just open and use
+- 🤖 **Claude CLI Integration**: All features built using Claude Code CLI
+- ⚡ **GitHub Actions**: Auto-deployment on every push
 
-## Quick Start for New Projects
+## Creating a New Website from Scratch
 
-Here's the complete setup flow for creating a similar project from scratch:
+Follow these steps to create and deploy a brand new website project:
 
-1. **Git & SSH Setup** → Initialize repo, create SSH key, add to GitHub
-2. **GitHub Repo** → Create repository, push initial code
-3. **GitHub Pages** → Enable Pages with GitHub Actions source
-4. **GitHub CLI** → Install `gh`, authenticate with `gh auth login`
-5. **Claude CLI** → Use Claude Code CLI for rapid development
-6. **Development** → Create issues, implement features, merge PRs
+### Step-by-Step Guide
 
-**See detailed instructions below for each step.**
+#### 1. Create Project Directory
+```bash
+# Create and navigate to your project folder
+mkdir my-new-website
+cd my-new-website
+```
 
-## Setup Instructions
+#### 2. Create Your HTML File
+```bash
+# Create a basic index.html file
+touch index.html
+```
 
-Follow these steps to set up this project from scratch:
+Then open `index.html` in your editor and add your website content. Here's a minimal starter:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My New Website</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to My Website</h1>
+    <p>This is my new website!</p>
+</body>
+</html>
+```
+
+#### 3. Initialize Git Repository
+```bash
+# Initialize git
+git init
+
+# Create .gitignore file
+echo ".DS_Store" > .gitignore
+```
+
+#### 4. Set Up SSH Key (First Time Only)
+If you haven't set up SSH keys for GitHub:
+
+```bash
+# Generate SSH key
+ssh-keygen -t ed25519 -C "your_email@example.com" -f ~/.ssh/id_ed25519
+
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add key to agent
+ssh-add ~/.ssh/id_ed25519
+
+# Display public key (copy this)
+cat ~/.ssh/id_ed25519.pub
+```
+
+Then add the key to GitHub:
+1. Go to https://github.com/settings/keys
+2. Click "New SSH key"
+3. Paste your public key and save
+
+Test the connection:
+```bash
+ssh -T git@github.com
+```
+
+#### 5. Create Initial Commit
+```bash
+# Stage your files
+git add .
+
+# Create first commit
+git commit -m "Initial commit: Create new website"
+```
+
+#### 6. Create GitHub Repository
+```bash
+# Option A: Using GitHub CLI (recommended)
+gh repo create my-new-website --public --source=. --remote=origin --push
+
+# Option B: Manually via web browser
+# 1. Go to https://github.com/new
+# 2. Create repository named "my-new-website"
+# 3. Don't initialize with README
+# 4. Then run:
+git remote add origin git@github.com:YOUR_USERNAME/my-new-website.git
+git branch -M main
+git push -u origin main
+```
+
+#### 7. Set Up GitHub Pages Auto-Deployment
+
+Create the workflow file:
+```bash
+mkdir -p .github/workflows
+```
+
+Create `.github/workflows/deploy.yml` with this content:
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+Commit and push the workflow:
+```bash
+git add .github/workflows/deploy.yml
+git commit -m "Add GitHub Pages deployment workflow"
+git push
+```
+
+#### 8. Enable GitHub Pages
+
+1. Go to your repo: `https://github.com/YOUR_USERNAME/my-new-website/settings/pages`
+2. Under "Build and deployment"
+3. Set **Source** to **"GitHub Actions"**
+4. Save
+
+#### 9. Wait for Deployment
+
+1. Go to Actions tab: `https://github.com/YOUR_USERNAME/my-new-website/actions`
+2. Watch the workflow run (takes 1-2 minutes)
+3. Your site will be live at: `https://YOUR_USERNAME.github.io/my-new-website/`
+
+#### 10. Start Developing with Claude CLI
+
+Now you can use Claude Code CLI to add features:
+
+```bash
+# Example: Ask Claude to add a feature
+# "Add a navigation menu with Home, About, and Contact sections"
+# "Add a dark mode toggle"
+# "Create a contact form"
+```
+
+Claude will:
+- Read your code
+- Implement the feature
+- Create commits with proper messages
+- Push changes (which auto-deploy via GitHub Actions)
+
+### Quick Summary
+
+For subsequent projects, the process is:
+
+```bash
+# 1. Create project
+mkdir my-project && cd my-project
+touch index.html
+
+# 2. Add your HTML content (edit index.html)
+
+# 3. Initialize git
+git init
+echo ".DS_Store" > .gitignore
+git add .
+git commit -m "Initial commit"
+
+# 4. Create GitHub repo and push
+gh repo create my-project --public --source=. --remote=origin --push
+
+# 5. Add deploy workflow (copy from this repo)
+mkdir -p .github/workflows
+# Copy deploy.yml from this repo to .github/workflows/
+git add .github/workflows/deploy.yml
+git commit -m "Add GitHub Pages deployment"
+git push
+
+# 6. Enable GitHub Pages (set source to "GitHub Actions")
+# Visit: https://github.com/YOUR_USERNAME/my-project/settings/pages
+
+# 7. Start developing with Claude CLI!
+```
+
+---
+
+## About This Project
+
+This is a todo list application demonstrating the workflow described above.
+
+## Setting Up This Specific Project
+
+If you want to recreate THIS todo list app specifically, follow these detailed steps:
 
 ### 1. Initialize Git Repository
 
