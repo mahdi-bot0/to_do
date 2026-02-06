@@ -5,6 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Todo List</title>
     <style>
+        :root {
+            /* Light mode colors */
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --header-text: #ffffff;
+            --card-bg: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #6b7280;
+            --text-tertiary: #374151;
+            --input-bg: #ffffff;
+            --input-border: #e0e0e0;
+            --input-border-focus: #667eea;
+            --item-bg: #f9fafb;
+            --item-bg-hover: #f3f4f6;
+            --button-bg: #667eea;
+            --button-bg-hover: #5568d3;
+            --folder-header-gradient-start: #667eea;
+            --folder-header-gradient-end: #764ba2;
+            --empty-state-text: #9ca3af;
+            --footer-text: #9ca3af;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode {
+            /* Dark mode colors */
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --header-text: #e0e0e0;
+            --card-bg: #252a3a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #9ca3af;
+            --text-tertiary: #d1d5db;
+            --input-bg: #1e2330;
+            --input-border: #3a3f51;
+            --input-border-focus: #8b9ceb;
+            --item-bg: #1e2330;
+            --item-bg-hover: #2a2f3f;
+            --button-bg: #5a6fd9;
+            --button-bg-hover: #7a8de8;
+            --folder-header-gradient-start: #3a4a6b;
+            --folder-header-gradient-end: #4a3a6b;
+            --empty-state-text: #6b7280;
+            --footer-text: #6b7280;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,9 +59,10 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -25,8 +72,10 @@
 
         header {
             text-align: center;
-            color: white;
+            color: var(--header-text);
             margin-bottom: 30px;
+            position: relative;
+            transition: color 0.3s ease;
         }
 
         header h1 {
@@ -34,12 +83,40 @@
             margin-bottom: 10px;
         }
 
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease, transform 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(180deg);
+        }
+
+        .theme-toggle:active {
+            transform: rotate(180deg) scale(0.95);
+        }
+
         .add-folder-section {
-            background: white;
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow);
             margin-bottom: 20px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
 
         .input-group {
@@ -50,30 +127,32 @@
         input[type="text"] {
             flex: 1;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--input-border);
             border-radius: 5px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
         }
 
         input[type="text"]:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--input-border-focus);
         }
 
         button {
             padding: 12px 24px;
-            background: #667eea;
+            background: var(--button-bg);
             color: white;
             border: none;
             border-radius: 5px;
             font-size: 16px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: background 0.3s ease, transform 0.3s ease;
         }
 
         button:hover {
-            background: #5568d3;
+            background: var(--button-bg-hover);
         }
 
         button.delete-btn {
@@ -92,11 +171,11 @@
         }
 
         .folder {
-            background: white;
+            background: var(--card-bg);
             border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow);
             overflow: hidden;
-            transition: transform 0.2s;
+            transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.3s ease;
         }
 
         .folder:hover {
@@ -104,12 +183,13 @@
         }
 
         .folder-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--folder-header-gradient-start) 0%, var(--folder-header-gradient-end) 100%);
             color: white;
             padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background 0.3s ease;
         }
 
         .folder-header h2 {
@@ -135,13 +215,13 @@
             align-items: center;
             padding: 12px;
             margin-bottom: 8px;
-            background: #f9fafb;
+            background: var(--item-bg);
             border-radius: 5px;
-            transition: background 0.3s;
+            transition: background 0.3s ease;
         }
 
         .todo-item:hover {
-            background: #f3f4f6;
+            background: var(--item-bg-hover);
         }
 
         .todo-item.completed {
@@ -150,7 +230,7 @@
 
         .todo-item.completed .todo-text {
             text-decoration: line-through;
-            color: #6b7280;
+            color: var(--text-secondary);
         }
 
         .checkbox {
@@ -164,13 +244,16 @@
         .todo-text {
             flex: 1;
             font-size: 16px;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
         }
 
         .due-date {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-secondary);
             margin-left: 12px;
             white-space: nowrap;
+            transition: color 0.3s ease;
         }
 
         .due-date.overdue {
@@ -186,17 +269,18 @@
         input[type="date"],
         select {
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--input-border);
             border-radius: 5px;
             font-size: 16px;
-            transition: border-color 0.3s;
-            background: white;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
         }
 
         input[type="date"]:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--input-border-focus);
         }
 
         .priority-badge {
@@ -240,8 +324,9 @@
         .filter-sort-section label {
             font-size: 14px;
             font-weight: 600;
-            color: #374151;
+            color: var(--text-tertiary);
             margin-right: 5px;
+            transition: color 0.3s ease;
         }
 
         .filter-group {
@@ -268,17 +353,19 @@
 
         .empty-state {
             text-align: center;
-            color: #9ca3af;
+            color: var(--empty-state-text);
             padding: 20px;
             font-style: italic;
+            transition: color 0.3s ease;
         }
 
         footer {
             text-align: center;
-            color: #9ca3af;
+            color: var(--footer-text);
             font-size: 14px;
             padding: 30px 20px 20px;
             margin-top: 30px;
+            transition: color 0.3s ease;
         }
 
         @media (max-width: 600px) {
@@ -334,6 +421,9 @@
 <body>
     <div class="container">
         <header>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                <span id="themeIcon">🌙</span>
+            </button>
             <h1>My Todo Lists</h1>
             <p>Organize your tasks with folders</p>
         </header>
@@ -355,6 +445,37 @@
     </div>
 
     <script>
+        // Theme functionality
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeIcon = document.getElementById('themeIcon');
+
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeIcon.textContent = '☀️';
+            } else {
+                themeIcon.textContent = '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+
+            body.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.textContent = '☀️';
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.textContent = '🌙';
+            }
+        }
+
+        // Initialize theme on page load
+        initTheme();
+
         // Load data from localStorage or initialize empty
         let folders = JSON.parse(localStorage.getItem('todoFolders')) || [];
 
