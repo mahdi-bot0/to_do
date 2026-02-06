@@ -368,6 +368,104 @@
             transition: color 0.3s ease;
         }
 
+        .search-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px var(--shadow);
+            margin-bottom: 20px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            font-size: 18px;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 40px 12px 40px;
+            border: 2px solid var(--input-border);
+            border-radius: 5px;
+            font-size: 16px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--input-border-focus);
+        }
+
+        .clear-search-btn {
+            position: absolute;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            display: none;
+            transition: color 0.3s ease;
+        }
+
+        .clear-search-btn:hover {
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .clear-search-btn.visible {
+            display: block;
+        }
+
+        .search-results-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .folder-name-badge {
+            display: inline-block;
+            background: var(--button-bg);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .highlight {
+            background-color: #fef08a;
+            padding: 2px 0;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+
+        body.dark-mode .highlight {
+            background-color: #854d0e;
+            color: #fef08a;
+        }
+
+        .no-results {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+
         @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
@@ -415,6 +513,11 @@
                 margin-left: 0;
                 font-size: 11px;
             }
+
+            .folder-name-badge {
+                flex-basis: 100%;
+                order: -2;
+            }
         }
     </style>
 </head>
@@ -427,6 +530,15 @@
             <h1>My Todo Lists</h1>
             <p>Organize your tasks with folders</p>
         </header>
+
+        <div class="search-section">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="globalSearch" placeholder="Search across all tasks..." oninput="performGlobalSearch()" />
+                <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">&times;</button>
+            </div>
+            <div class="search-results-info" id="searchResultsInfo"></div>
+        </div>
 
         <div class="add-folder-section">
             <div class="input-group">
@@ -478,6 +590,7 @@
 
         // Load data from localStorage or initialize empty
         let folders = JSON.parse(localStorage.getItem('todoFolders')) || [];
+        let currentSearchQuery = '';
 
         // Save data to localStorage
         function saveData() {
@@ -578,36 +691,117 @@
             return itemsWithIndex;
         }
 
+        // Highlight matching text in search results
+        function highlightText(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // Perform global search across all folders and tasks
+        function performGlobalSearch() {
+            const searchInput = document.getElementById('globalSearch');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const searchInfo = document.getElementById('searchResultsInfo');
+            const query = searchInput.value.trim();
+
+            currentSearchQuery = query;
+
+            // Show/hide clear button
+            if (query) {
+                clearBtn.classList.add('visible');
+            } else {
+                clearBtn.classList.remove('visible');
+                searchInfo.textContent = '';
+            }
+
+            renderFolders();
+        }
+
+        // Clear search
+        function clearSearch() {
+            const searchInput = document.getElementById('globalSearch');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            const searchInfo = document.getElementById('searchResultsInfo');
+
+            searchInput.value = '';
+            currentSearchQuery = '';
+            clearBtn.classList.remove('visible');
+            searchInfo.textContent = '';
+
+            renderFolders();
+        }
+
         // Render all folders
         function renderFolders() {
             const container = document.getElementById('foldersContainer');
+            const searchInfo = document.getElementById('searchResultsInfo');
 
             if (folders.length === 0) {
                 container.innerHTML = '<div class="empty-state">No folders yet. Create one to get started!</div>';
+                if (currentSearchQuery) {
+                    searchInfo.textContent = '';
+                }
                 return;
             }
 
-            container.innerHTML = folders.map((folder, folderIndex) => `
+            // If search is active, filter folders and items
+            let foldersToDisplay = folders;
+            let totalMatches = 0;
+
+            if (currentSearchQuery) {
+                const query = currentSearchQuery.toLowerCase();
+                foldersToDisplay = folders.map((folder, folderIndex) => {
+                    const matchingItems = folder.items.filter(item =>
+                        item.text.toLowerCase().includes(query)
+                    );
+                    totalMatches += matchingItems.length;
+                    return {
+                        ...folder,
+                        items: matchingItems,
+                        originalIndex: folderIndex,
+                        hasMatches: matchingItems.length > 0
+                    };
+                }).filter(folder => folder.hasMatches);
+
+                // Update search results info
+                if (totalMatches === 0) {
+                    searchInfo.textContent = `No results found for "${currentSearchQuery}"`;
+                    container.innerHTML = '<div class="no-results">No tasks match your search query. Try different keywords.</div>';
+                    return;
+                } else {
+                    searchInfo.textContent = `Found ${totalMatches} task${totalMatches !== 1 ? 's' : ''} matching "${currentSearchQuery}"`;
+                }
+            } else {
+                searchInfo.textContent = '';
+            }
+
+            container.innerHTML = foldersToDisplay.map((folder) => {
+                const folderIndex = currentSearchQuery ? folder.originalIndex : foldersToDisplay.indexOf(folder);
+                const actualFolderIndex = currentSearchQuery ? folder.originalIndex : folderIndex;
+
+                return `
                 <div class="folder">
                     <div class="folder-header">
                         <h2>${folder.name}</h2>
-                        <button class="delete-btn" onclick="deleteFolder(${folderIndex})">Delete Folder</button>
+                        ${!currentSearchQuery ? `<button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>` : ''}
                     </div>
                     <div class="folder-content">
+                        ${!currentSearchQuery ? `
                         <div class="add-item-section">
-                            <input type="text" id="itemInput${folderIndex}" placeholder="Add a new task..." />
-                            <input type="date" id="dateInput${folderIndex}" />
-                            <select id="priorityInput${folderIndex}" class="priority-select">
+                            <input type="text" id="itemInput${actualFolderIndex}" placeholder="Add a new task..." />
+                            <input type="date" id="dateInput${actualFolderIndex}" />
+                            <select id="priorityInput${actualFolderIndex}" class="priority-select">
                                 <option value="low">Low Priority</option>
                                 <option value="medium" selected>Medium Priority</option>
                                 <option value="high">High Priority</option>
                             </select>
-                            <button onclick="addItem(${folderIndex})">Add</button>
+                            <button onclick="addItem(${actualFolderIndex})">Add</button>
                         </div>
                         <div class="filter-sort-section">
                             <div class="filter-group">
                                 <label>Filter:</label>
-                                <select id="filterPriority${folderIndex}" onchange="renderFolders()">
+                                <select id="filterPriority${actualFolderIndex}" onchange="renderFolders()">
                                     <option value="all">All Priorities</option>
                                     <option value="high">High Only</option>
                                     <option value="medium">Medium Only</option>
@@ -616,32 +810,52 @@
                             </div>
                             <div class="filter-group">
                                 <label>Sort:</label>
-                                <select id="sortPriority${folderIndex}" onchange="renderFolders()">
+                                <select id="sortPriority${actualFolderIndex}" onchange="renderFolders()">
                                     <option value="none">Default Order</option>
                                     <option value="priority">By Priority</option>
                                     <option value="date">By Due Date</option>
                                 </select>
                             </div>
                         </div>
+                        ` : ''}
                         <ul class="todo-list">
-                            ${getFilteredAndSortedItems(folder.items, folderIndex).length === 0 ?
-                                '<div class="empty-state">No tasks match the current filter</div>' :
-                                getFilteredAndSortedItems(folder.items, folderIndex).map((item) => `
+                            ${currentSearchQuery ?
+                                // Search mode: show matching items with highlights
+                                folder.items.map((item) => {
+                                    const itemIndex = folders[actualFolderIndex].items.indexOf(folders[actualFolderIndex].items.find(i => i.text === item.text && i.completed === item.completed));
+                                    return `
                                     <li class="todo-item ${item.completed ? 'completed' : ''}">
                                         <input type="checkbox" class="checkbox"
                                                ${item.completed ? 'checked' : ''}
-                                               onchange="toggleItem(${folderIndex}, ${item.originalIndex})" />
-                                        <span class="todo-text">${item.text}</span>
-                                        ${getPriorityBadge(item.priority, folderIndex, item.originalIndex)}
+                                               onchange="toggleItem(${actualFolderIndex}, ${itemIndex})" />
+                                        <span class="folder-name-badge">${folder.name}</span>
+                                        <span class="todo-text">${highlightText(item.text, currentSearchQuery)}</span>
+                                        ${getPriorityBadge(item.priority, actualFolderIndex, itemIndex)}
                                         ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                        <button class="delete-item-btn" onclick="deleteItem(${folderIndex}, ${item.originalIndex})">&times;</button>
+                                        <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${itemIndex})">&times;</button>
                                     </li>
-                                `).join('')
+                                `}).join('')
+                                :
+                                // Normal mode: show filtered and sorted items
+                                (getFilteredAndSortedItems(folder.items, actualFolderIndex).length === 0 ?
+                                    '<div class="empty-state">No tasks match the current filter</div>' :
+                                    getFilteredAndSortedItems(folder.items, actualFolderIndex).map((item) => `
+                                        <li class="todo-item ${item.completed ? 'completed' : ''}">
+                                            <input type="checkbox" class="checkbox"
+                                                   ${item.completed ? 'checked' : ''}
+                                                   onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})" />
+                                            <span class="todo-text">${item.text}</span>
+                                            ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
+                                            ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
+                                            <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
+                                        </li>
+                                    `).join('')
+                                )
                             }
                         </ul>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Add a new folder
