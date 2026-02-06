@@ -110,6 +110,44 @@
             transform: rotate(180deg) scale(0.95);
         }
 
+        .header-controls {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .export-import-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--header-text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.3s ease, transform 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .export-import-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .export-import-btn:active {
+            transform: translateY(0);
+        }
+
+        .import-file-input {
+            display: none;
+        }
+
         .add-folder-section {
             background: var(--card-bg);
             padding: 20px;
@@ -500,6 +538,25 @@
         @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
+                margin-top: 60px;
+            }
+
+            .header-controls {
+                flex-wrap: wrap;
+                right: 0;
+                left: 0;
+                justify-content: center;
+            }
+
+            .export-import-btn {
+                font-size: 12px;
+                padding: 8px 12px;
+            }
+
+            .theme-toggle {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
             }
 
             .input-group {
@@ -564,9 +621,18 @@
 <body>
     <div class="container">
         <header>
-            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
-                <span id="themeIcon">🌙</span>
-            </button>
+            <div class="header-controls">
+                <button class="export-import-btn" onclick="exportData()" aria-label="Export data">
+                    <span>📥</span> Export
+                </button>
+                <button class="export-import-btn" onclick="document.getElementById('importFileInput').click()" aria-label="Import data">
+                    <span>📤</span> Import
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                    <span id="themeIcon">🌙</span>
+                </button>
+            </div>
+            <input type="file" id="importFileInput" class="import-file-input" accept=".json" onchange="importData(event)" />
             <h1>My Todo Lists</h1>
             <p>Organize your tasks with folders</p>
         </header>
@@ -1120,6 +1186,168 @@
                 addItem(folderIndex);
             }
         });
+
+        // Export data functionality
+        function exportData() {
+            // Create export object with metadata
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                folders: folders
+            };
+
+            // Convert to JSON string
+            const jsonString = JSON.stringify(exportData, null, 2);
+
+            // Create blob
+            const blob = new Blob([jsonString], { type: 'application/json' });
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            // Format filename with current date: todo-backup-YYYY-MM-DD.json
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const filename = `todo-backup-${year}-${month}-${day}.json`;
+
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            alert(`Data exported successfully as ${filename}`);
+        }
+
+        // Validate imported JSON structure
+        function validateImportData(data) {
+            // Check if data has required structure
+            if (!data || typeof data !== 'object') {
+                return { valid: false, error: 'Invalid JSON structure' };
+            }
+
+            // Check for folders array
+            if (!Array.isArray(data.folders)) {
+                return { valid: false, error: 'Missing or invalid folders array' };
+            }
+
+            // Validate each folder
+            for (let i = 0; i < data.folders.length; i++) {
+                const folder = data.folders[i];
+
+                if (!folder.name || typeof folder.name !== 'string') {
+                    return { valid: false, error: `Invalid folder name at index ${i}` };
+                }
+
+                if (!Array.isArray(folder.items)) {
+                    return { valid: false, error: `Invalid items array in folder "${folder.name}"` };
+                }
+
+                // Validate each item
+                for (let j = 0; j < folder.items.length; j++) {
+                    const item = folder.items[j];
+
+                    if (!item.text || typeof item.text !== 'string') {
+                        return { valid: false, error: `Invalid item text in folder "${folder.name}" at index ${j}` };
+                    }
+
+                    if (typeof item.completed !== 'boolean') {
+                        return { valid: false, error: `Invalid completed status in folder "${folder.name}" for item "${item.text}"` };
+                    }
+
+                    // Optional fields validation
+                    if (item.dueDate !== null && item.dueDate !== undefined && typeof item.dueDate !== 'string') {
+                        return { valid: false, error: `Invalid due date in folder "${folder.name}" for item "${item.text}"` };
+                    }
+
+                    if (item.priority && !['low', 'medium', 'high'].includes(item.priority)) {
+                        return { valid: false, error: `Invalid priority in folder "${folder.name}" for item "${item.text}"` };
+                    }
+
+                    if (item.tags && !Array.isArray(item.tags)) {
+                        return { valid: false, error: `Invalid tags in folder "${folder.name}" for item "${item.text}"` };
+                    }
+                }
+            }
+
+            return { valid: true };
+        }
+
+        // Import data functionality
+        function importData(event) {
+            const file = event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            // Check file extension
+            if (!file.name.endsWith('.json')) {
+                alert('Please select a valid JSON file');
+                event.target.value = ''; // Reset file input
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    // Parse JSON
+                    const importedData = JSON.parse(e.target.result);
+
+                    // Validate structure
+                    const validation = validateImportData(importedData);
+
+                    if (!validation.valid) {
+                        alert(`Import failed: ${validation.error}`);
+                        event.target.value = ''; // Reset file input
+                        return;
+                    }
+
+                    // Show confirmation dialog
+                    const currentItemCount = folders.reduce((sum, folder) => sum + folder.items.length, 0);
+                    const importItemCount = importedData.folders.reduce((sum, folder) => sum + folder.items.length, 0);
+
+                    const confirmMessage = `Are you sure you want to import this data?\n\n` +
+                        `Current data: ${folders.length} folder(s), ${currentItemCount} task(s)\n` +
+                        `Import data: ${importedData.folders.length} folder(s), ${importItemCount} task(s)\n\n` +
+                        `WARNING: This will overwrite all your current data!`;
+
+                    if (confirm(confirmMessage)) {
+                        // Import the data
+                        folders = importedData.folders;
+                        saveData();
+                        renderFolders();
+
+                        // Clear search if active
+                        if (currentSearchQuery || currentTagFilter) {
+                            clearSearch();
+                            currentTagFilter = '';
+                        }
+
+                        alert(`Import successful! Imported ${importedData.folders.length} folder(s) with ${importItemCount} task(s).`);
+                    }
+
+                } catch (error) {
+                    alert(`Import failed: Invalid JSON file. ${error.message}`);
+                }
+
+                // Reset file input
+                event.target.value = '';
+            };
+
+            reader.onerror = function() {
+                alert('Error reading file');
+                event.target.value = ''; // Reset file input
+            };
+
+            reader.readAsText(file);
+        }
 
         // Initial render
         renderFolders();
