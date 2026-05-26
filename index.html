@@ -972,6 +972,47 @@
         .color-swatch:hover { transform: scale(1.15); }
         .color-swatch.active { border-color: var(--text-primary); transform: scale(1.1); }
 
+        /* Folder rename */
+        .folder-rename-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .folder-rename-btn:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .folder-header:hover .folder-rename-btn {
+            opacity: 1;
+        }
+
+        .folder-name-edit-input {
+            font-size: 1.2em;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 5px;
+            border: 2px solid rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            outline: none;
+            min-width: 200px;
+        }
+
+        .folder-name-edit-input::placeholder { color: rgba(255,255,255,0.6); }
+        .folder-name-edit-input:focus { border-color: white; background: rgba(255,255,255,0.25); }
+
         /* Drag and drop */
         .todo-item-wrapper.dragging { opacity: 0.4; }
         .todo-item-wrapper.drag-over { border-top: 2px solid var(--button-bg); }
@@ -1803,8 +1844,11 @@
                 return `
                 <div class="folder">
                     <div class="folder-header" style="background:linear-gradient(135deg,${fc.start} 0%,${fc.end} 100%)">
-                        <div>
-                            <h2>${folder.name}</h2>
+                        <div id="folderNameArea-${actualFolderIndex}">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <h2>${folder.name}</h2>
+                                ${!(currentSearchQuery || currentTagFilter) && !shareMode ? `<button class="folder-rename-btn" onclick="renameFolderInline(${actualFolderIndex})" title="Rename folder">✏️</button>` : ''}
+                            </div>
                             ${totalT > 0 ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
                                 <div class="progress-bar-container"><div class="progress-bar" style="width:${pct}%"></div></div>
                                 <span class="progress-text">${doneT}/${totalT} done</span>
@@ -2303,6 +2347,39 @@
             folders[folderIndex].items[itemIndex].tags = parseTags(tagsInput.value);
             folders[folderIndex].items[itemIndex].dueDate = dateInput.value || null;
 
+            saveData();
+            renderFolders();
+        }
+
+        // ── Folder rename ────────────────────────────────────────────────
+
+        function renameFolderInline(folderIndex) {
+            const area = document.getElementById(`folderNameArea-${folderIndex}`);
+            if (!area) return;
+            const currentName = folders[folderIndex].name;
+            area.innerHTML = `
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <input type="text" class="folder-name-edit-input" id="folderNameInput-${folderIndex}"
+                           value="${escapeAttr(currentName)}" placeholder="Folder name..."
+                           onkeydown="if(event.key==='Enter')saveFolderRename(${folderIndex});else if(event.key==='Escape')renderFolders()" />
+                    <button class="notes-cancel-btn" onclick="renderFolders()" style="padding:4px 12px;font-size:13px">Cancel</button>
+                    <button class="notes-save-btn" onclick="saveFolderRename(${folderIndex})" style="padding:4px 12px;font-size:13px">Save</button>
+                </div>
+            `;
+            const input = document.getElementById(`folderNameInput-${folderIndex}`);
+            input.focus();
+            input.select();
+        }
+
+        function saveFolderRename(folderIndex) {
+            const input = document.getElementById(`folderNameInput-${folderIndex}`);
+            if (!input) return;
+            const newName = input.value.trim();
+            if (!newName) { alert('Folder name cannot be empty'); return; }
+            folders[folderIndex].name = newName;
+            if (folders[folderIndex].collaborative && folders[folderIndex].shareId) {
+                db.collection('shared').doc(folders[folderIndex].shareId).update({ folderName: newName });
+            }
             saveData();
             renderFolders();
         }
