@@ -1126,6 +1126,7 @@
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
+                if (shareMode) return; // shared view handles its own data
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('signOutBtn').style.display = 'flex';
                 document.getElementById('userInfo').style.display = 'flex';
