@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Todo List</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         :root {
             /* Light mode colors */
@@ -640,6 +643,74 @@
             font-size: 16px;
         }
 
+        .auth-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .auth-card h2 {
+            font-size: 2em;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .auth-card p {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .google-signin-btn {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .google-signin-btn:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            transform: translateY(-1px);
+            background: #f8f8f8;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--header-text);
+            font-size: 14px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
         @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
@@ -733,9 +804,25 @@
     </style>
 </head>
 <body>
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card">
+            <h2>My Todo Lists</h2>
+            <p>Sign in to sync your tasks across all your devices.</p>
+            <button class="google-signin-btn" onclick="signInWithGoogle()">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Sign in with Google
+            </button>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-controls">
+                <div class="user-info" id="userInfo" style="display:none">
+                    <img id="userAvatar" class="user-avatar" src="" alt="" />
+                    <span id="userName"></span>
+                </div>
+                <button class="export-import-btn" id="signOutBtn" onclick="signOut()" style="display:none">Sign Out</button>
                 <button class="export-import-btn" onclick="exportData()" aria-label="Export data">
                     <span>📥</span> Export
                 </button>
@@ -777,6 +864,66 @@
     </div>
 
     <script>
+        // Firebase setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiGKPiWaezx7jWlLb_s99Uo1Q21Sg4UCE",
+            authDomain: "todo-app-f62f1.firebaseapp.com",
+            projectId: "todo-app-f62f1",
+            storageBucket: "todo-app-f62f1.firebasestorage.app",
+            messagingSenderId: "853281851108",
+            appId: "1:853281851108:web:0842df39abdb8552fc0ef1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let unsubscribeSnapshot = null;
+
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
+        }
+
+        function signOut() {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            auth.signOut();
+        }
+
+        function startRealtimeSync() {
+            unsubscribeSnapshot = db.collection('users').doc(currentUser.uid)
+                .onSnapshot(doc => {
+                    folders = doc.exists ? (doc.data().folders || []) : [];
+                    migrateData();
+                    renderFolders();
+                });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('signOutBtn').style.display = 'flex';
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('userName').textContent = user.displayName || user.email;
+                if (user.photoURL) {
+                    document.getElementById('userAvatar').src = user.photoURL;
+                    document.getElementById('userAvatar').style.display = 'block';
+                }
+                startRealtimeSync();
+            } else {
+                currentUser = null;
+                folders = [];
+                document.getElementById('authOverlay').style.display = 'flex';
+                document.getElementById('signOutBtn').style.display = 'none';
+                document.getElementById('userInfo').style.display = 'none';
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                    unsubscribeSnapshot = null;
+                }
+            }
+        });
+
         // Theme functionality
         function initTheme() {
             const savedTheme = localStorage.getItem('theme');
@@ -808,8 +955,7 @@
         // Initialize theme on page load
         initTheme();
 
-        // Load data from localStorage or initialize empty
-        let folders = JSON.parse(localStorage.getItem('todoFolders')) || [];
+        let folders = [];
         let currentSearchQuery = '';
         let currentTagFilter = '';
 
@@ -829,12 +975,10 @@
             }
         }
 
-        // Run migration on load
-        migrateData();
-
-        // Save data to localStorage
+        // Save data to Firestore
         function saveData() {
-            localStorage.setItem('todoFolders', JSON.stringify(folders));
+            if (!currentUser) return;
+            db.collection('users').doc(currentUser.uid).set({ folders: folders });
         }
 
         // Format date for display
@@ -1561,8 +1705,7 @@
             reader.readAsText(file);
         }
 
-        // Initial render
-        renderFolders();
+        // Initial render happens after auth state resolves
     </script>
 </body>
 </html>
