@@ -900,6 +900,158 @@
             margin-bottom: 16px;
         }
 
+        /* Progress bar */
+        .progress-bar-container {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            max-width: 160px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: rgba(255,255,255,0.85);
+            white-space: nowrap;
+        }
+
+        /* Color picker */
+        .color-picker-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 6px;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            padding: 0;
+        }
+
+        .color-picker-btn:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .color-palette {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 10px;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            z-index: 200;
+            flex-wrap: wrap;
+            width: 168px;
+        }
+
+        .color-palette.open { display: flex; }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+
+        .color-swatch:hover { transform: scale(1.15); }
+        .color-swatch.active { border-color: var(--text-primary); transform: scale(1.1); }
+
+        /* Drag and drop */
+        .todo-item-wrapper.dragging { opacity: 0.4; }
+        .todo-item-wrapper.drag-over { border-top: 2px solid var(--button-bg); }
+
+        /* Subtask button */
+        .subtask-btn {
+            background: transparent;
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            white-space: nowrap;
+        }
+
+        .subtask-btn:hover { background: var(--item-bg-hover); }
+        .subtask-btn.has-subtasks { opacity: 1 !important; color: var(--button-bg); border-color: var(--button-bg); }
+        .todo-item:hover .subtask-btn { opacity: 1; }
+
+        /* Subtasks section */
+        .subtasks-section {
+            display: none;
+            padding: 10px 12px;
+            margin-top: 4px;
+            background: var(--input-bg);
+            border-radius: 5px;
+            border: 1px solid var(--input-border);
+        }
+
+        .subtasks-section.expanded { display: block; }
+
+        .add-subtask-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .subtask-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            font-size: 13px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .subtask-input:focus { outline: none; border-color: var(--input-border-focus); }
+
+        .subtask-add-btn { padding: 6px 14px; font-size: 13px; border-radius: 4px; }
+
+        .subtask-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .subtask-item.completed span { text-decoration: line-through; color: var(--text-secondary); }
+        .subtask-item span { flex: 1; font-size: 14px; color: var(--text-primary); }
+
+        .subtask-delete-btn {
+            background: transparent;
+            color: #ef4444;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .subtask-item:hover .subtask-delete-btn { opacity: 1; }
+
         @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
@@ -1201,6 +1353,111 @@
         let currentSearchQuery = '';
         let currentTagFilter = '';
 
+        // Folder color palette
+        const FOLDER_COLORS = [
+            { start: '#667eea', end: '#764ba2' },
+            { start: '#ef4444', end: '#dc2626' },
+            { start: '#f59e0b', end: '#d97706' },
+            { start: '#10b981', end: '#059669' },
+            { start: '#3b82f6', end: '#2563eb' },
+            { start: '#ec4899', end: '#db2777' },
+            { start: '#6366f1', end: '#4f46e5' },
+            { start: '#14b8a6', end: '#0d9488' },
+        ];
+
+        function setFolderColor(folderIndex, colorIndex) {
+            folders[folderIndex].colorIndex = colorIndex;
+            saveData();
+            renderFolders();
+        }
+
+        function toggleColorPicker(event, folderIndex) {
+            event.stopPropagation();
+            const palette = document.getElementById(`colorPalette-${folderIndex}`);
+            const isOpen = palette.classList.contains('open');
+            document.querySelectorAll('.color-palette.open').forEach(p => p.classList.remove('open'));
+            if (!isOpen) palette.classList.add('open');
+        }
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.color-palette.open').forEach(p => p.classList.remove('open'));
+        });
+
+        // Drag to reorder
+        let dragSrcFolderIndex = null;
+        let dragSrcItemIndex = null;
+
+        function dragStart(event, folderIndex, itemIndex) {
+            dragSrcFolderIndex = folderIndex;
+            dragSrcItemIndex = itemIndex;
+            event.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => event.currentTarget.classList.add('dragging'), 0);
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function dragEnd(event) {
+            event.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function dropItem(event, folderIndex, itemIndex) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            if (dragSrcFolderIndex !== folderIndex || dragSrcItemIndex === itemIndex) return;
+            const items = folders[folderIndex].items;
+            const [moved] = items.splice(dragSrcItemIndex, 1);
+            items.splice(itemIndex, 0, moved);
+            saveData();
+            renderFolders();
+        }
+
+        // Subtasks
+        function toggleSubtasks(folderIndex, itemIndex) {
+            const section = document.getElementById(`subtasks-${folderIndex}-${itemIndex}`);
+            if (section) section.classList.toggle('expanded');
+        }
+
+        function addSubtask(folderIndex, itemIndex) {
+            const input = document.getElementById(`subtaskInput-${folderIndex}-${itemIndex}`);
+            if (!input || !input.value.trim()) return;
+            if (!folders[folderIndex].items[itemIndex].subtasks)
+                folders[folderIndex].items[itemIndex].subtasks = [];
+            folders[folderIndex].items[itemIndex].subtasks.push({ text: input.value.trim(), completed: false });
+            saveData();
+            renderFolders();
+            setTimeout(() => {
+                const s = document.getElementById(`subtasks-${folderIndex}-${itemIndex}`);
+                if (s) s.classList.add('expanded');
+            }, 0);
+        }
+
+        function toggleSubtask(folderIndex, itemIndex, subtaskIndex) {
+            const sub = folders[folderIndex].items[itemIndex].subtasks[subtaskIndex];
+            sub.completed = !sub.completed;
+            saveData();
+            renderFolders();
+            setTimeout(() => {
+                const s = document.getElementById(`subtasks-${folderIndex}-${itemIndex}`);
+                if (s) s.classList.add('expanded');
+            }, 0);
+        }
+
+        function deleteSubtask(folderIndex, itemIndex, subtaskIndex) {
+            folders[folderIndex].items[itemIndex].subtasks.splice(subtaskIndex, 1);
+            saveData();
+            renderFolders();
+            setTimeout(() => {
+                const s = document.getElementById(`subtasks-${folderIndex}-${itemIndex}`);
+                if (s && folders[folderIndex].items[itemIndex].subtasks.length > 0)
+                    s.classList.add('expanded');
+            }, 0);
+        }
+
         // Migrate existing data to include notes field if missing
         function migrateData() {
             let needsSave = false;
@@ -1208,6 +1465,10 @@
                 folder.items.forEach(item => {
                     if (item.notes === undefined) {
                         item.notes = '';
+                        needsSave = true;
+                    }
+                    if (item.subtasks === undefined) {
+                        item.subtasks = [];
                         needsSave = true;
                     }
                 });
@@ -1534,13 +1795,27 @@
             container.innerHTML = foldersToDisplay.map((folder) => {
                 const folderIndex = (currentSearchQuery || currentTagFilter) ? folder.originalIndex : foldersToDisplay.indexOf(folder);
                 const actualFolderIndex = (currentSearchQuery || currentTagFilter) ? folder.originalIndex : folderIndex;
+                const fc = FOLDER_COLORS[folder.colorIndex || 0];
+                const totalT = folder.items.length;
+                const doneT = folder.items.filter(i => i.completed).length;
+                const pct = totalT > 0 ? Math.round(doneT / totalT * 100) : 0;
 
                 return `
                 <div class="folder">
-                    <div class="folder-header">
-                        <h2>${folder.name}</h2>
+                    <div class="folder-header" style="background:linear-gradient(135deg,${fc.start} 0%,${fc.end} 100%)">
+                        <div>
+                            <h2>${folder.name}</h2>
+                            ${totalT > 0 ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                                <div class="progress-bar-container"><div class="progress-bar" style="width:${pct}%"></div></div>
+                                <span class="progress-text">${doneT}/${totalT} done</span>
+                            </div>` : ''}
+                        </div>
                         ${!(currentSearchQuery || currentTagFilter) && !shareMode ? `
-                        <div style="display:flex;gap:8px">
+                        <div style="display:flex;gap:8px;align-items:center;position:relative">
+                            <button class="color-picker-btn" onclick="toggleColorPicker(event,${actualFolderIndex})" title="Change color">🎨</button>
+                            <div class="color-palette" id="colorPalette-${actualFolderIndex}">
+                                ${FOLDER_COLORS.map((c,ci) => `<div class="color-swatch ${(folder.colorIndex||0)===ci?'active':''}" style="background:linear-gradient(135deg,${c.start},${c.end})" onclick="setFolderColor(${actualFolderIndex},${ci})"></div>`).join('')}
+                            </div>
                             <button class="share-btn" onclick="openShareModal(${actualFolderIndex})">Share</button>
                             <button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>
                         </div>` : ''}
@@ -1621,7 +1896,12 @@
                                 (getFilteredAndSortedItems(folder.items, actualFolderIndex).length === 0 ?
                                     '<div class="empty-state">No tasks match the current filter</div>' :
                                     getFilteredAndSortedItems(folder.items, actualFolderIndex).map((item) => `
-                                        <li class="todo-item-wrapper">
+                                        <li class="todo-item-wrapper"
+                                            draggable="true"
+                                            ondragstart="dragStart(event,${actualFolderIndex},${item.originalIndex})"
+                                            ondragover="dragOver(event)"
+                                            ondrop="dropItem(event,${actualFolderIndex},${item.originalIndex})"
+                                            ondragend="dragEnd(event)">
                                             <div class="todo-item ${item.completed ? 'completed' : ''}" id="todoItem-${actualFolderIndex}-${item.originalIndex}">
                                                 <input type="checkbox" class="checkbox"
                                                        ${item.completed ? 'checked' : ''}
@@ -1630,6 +1910,7 @@
                                                 ${renderTagBadges(item.tags)}
                                                 ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
                                                 <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
+                                                <button class="subtask-btn ${(item.subtasks||[]).length>0?'has-subtasks':''}" onclick="toggleSubtasks(${actualFolderIndex},${item.originalIndex})" title="Subtasks">${(item.subtasks||[]).length>0?`${(item.subtasks||[]).filter(s=>s.completed).length}/${(item.subtasks||[]).length} subtasks`:'+ subtask'}</button>
                                                 <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
                                                 ${shareMode && currentShareAccess === 'view' ? '' : `
                                                     <button class="edit-item-btn" onclick="editItem(${actualFolderIndex}, ${item.originalIndex})" title="Edit task">✏️</button>
@@ -1642,6 +1923,21 @@
                                                     <button class="notes-cancel-btn" onclick="cancelNotes(${actualFolderIndex}, ${item.originalIndex})">Cancel</button>
                                                     <button class="notes-save-btn" onclick="saveNotes(${actualFolderIndex}, ${item.originalIndex})">Save</button>
                                                 </div>
+                                            </div>
+                                            <div class="subtasks-section" id="subtasks-${actualFolderIndex}-${item.originalIndex}">
+                                                <div class="add-subtask-row">
+                                                    <input type="text" class="subtask-input" id="subtaskInput-${actualFolderIndex}-${item.originalIndex}" placeholder="Add a subtask..." onkeypress="if(event.key==='Enter')addSubtask(${actualFolderIndex},${item.originalIndex})" />
+                                                    <button class="subtask-add-btn" onclick="addSubtask(${actualFolderIndex},${item.originalIndex})">Add</button>
+                                                </div>
+                                                <ul class="subtask-list">
+                                                    ${(item.subtasks||[]).map((sub,si) => `
+                                                        <li class="subtask-item ${sub.completed?'completed':''}">
+                                                            <input type="checkbox" class="checkbox" style="width:18px;height:18px;flex-shrink:0" ${sub.completed?'checked':''} onchange="toggleSubtask(${actualFolderIndex},${item.originalIndex},${si})" />
+                                                            <span>${sub.text}</span>
+                                                            <button class="subtask-delete-btn" onclick="deleteSubtask(${actualFolderIndex},${item.originalIndex},${si})">×</button>
+                                                        </li>
+                                                    `).join('')}
+                                                </ul>
                                             </div>
                                         </li>
                                     `).join('')
