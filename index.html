@@ -711,6 +711,141 @@
             border: 2px solid rgba(255,255,255,0.5);
         }
 
+        .share-btn {
+            background: #10b981;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .share-btn:hover {
+            background: #059669;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 460px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-card h3 {
+            font-size: 1.4em;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .modal-card > p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .share-access-options {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .share-access-option {
+            flex: 1;
+            border: 2px solid var(--input-border);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .share-access-option.selected {
+            border-color: #10b981;
+            background: var(--item-bg);
+        }
+
+        .share-access-option strong {
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .share-access-option p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .share-link-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .share-link-input {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: var(--item-bg);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--input-border);
+        }
+
+        .modal-close-btn {
+            background: var(--item-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--input-border);
+        }
+
+        .modal-close-btn:hover {
+            background: var(--item-bg-hover);
+        }
+
+        .shared-banner {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .shared-badge {
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .view-only-notice {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            padding: 8px;
+            background: var(--item-bg);
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
         @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
@@ -815,6 +950,34 @@
         </div>
     </div>
 
+    <div id="shareModal" class="modal-overlay" style="display:none">
+        <div class="modal-card">
+            <h3>Share Folder</h3>
+            <p>Choose what others can do with this folder:</p>
+            <div class="share-access-options">
+                <div class="share-access-option selected" id="viewOption" onclick="selectShareAccess('view')">
+                    <strong>👁 View only</strong>
+                    <p>Can see tasks but not edit them</p>
+                </div>
+                <div class="share-access-option" id="editOption" onclick="selectShareAccess('edit')">
+                    <strong>✏️ Can edit</strong>
+                    <p>Can add, complete &amp; delete tasks</p>
+                </div>
+            </div>
+            <div id="shareLinkSection" style="display:none">
+                <div class="share-link-row">
+                    <input type="text" class="share-link-input" id="shareLinkInput" readonly />
+                    <button class="share-btn" onclick="copyShareLink()">Copy</button>
+                </div>
+                <p id="copyConfirm" style="color:#10b981;font-size:13px;display:none">Copied to clipboard!</p>
+            </div>
+            <div class="modal-actions">
+                <button class="share-btn" onclick="generateShareLink()">Generate Link</button>
+                <button class="modal-close-btn" onclick="closeShareModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-controls">
@@ -845,6 +1008,14 @@
                 <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()">&times;</button>
             </div>
             <div class="search-results-info" id="searchResultsInfo"></div>
+        </div>
+
+        <div id="sharedBanner" class="shared-banner" style="display:none">
+            <div>
+                <span class="shared-badge">Shared Folder</span>
+                <span id="sharedFolderTitle" style="margin-left:12px;font-weight:600;color:var(--text-primary)"></span>
+            </div>
+            <span id="sharedAccessLabel" style="font-size:13px;color:var(--text-secondary)"></span>
         </div>
 
         <div class="add-folder-section">
@@ -977,6 +1148,11 @@
 
         // Save data to Firestore
         function saveData() {
+            if (shareMode) {
+                if (currentShareAccess !== 'edit' || !currentShareId) return;
+                db.collection('shared').doc(currentShareId).update({ items: folders[0] ? folders[0].items : [] });
+                return;
+            }
             if (!currentUser) return;
             db.collection('users').doc(currentUser.uid).set({ folders: folders });
         }
@@ -1286,10 +1462,15 @@
                 <div class="folder">
                     <div class="folder-header">
                         <h2>${folder.name}</h2>
-                        ${!(currentSearchQuery || currentTagFilter) ? `<button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>` : ''}
+                        ${!(currentSearchQuery || currentTagFilter) && !shareMode ? `
+                        <div style="display:flex;gap:8px">
+                            <button class="share-btn" onclick="openShareModal(${actualFolderIndex})">Share</button>
+                            <button class="delete-btn" onclick="deleteFolder(${actualFolderIndex})">Delete Folder</button>
+                        </div>` : ''}
                     </div>
                     <div class="folder-content">
-                        ${!(currentSearchQuery || currentTagFilter) ? `
+                        ${shareMode && currentShareAccess === 'view' ? '<div class="view-only-notice">👁 View only — you cannot edit this folder</div>' : ''}
+                        ${!(currentSearchQuery || currentTagFilter) && (!shareMode || currentShareAccess === 'edit') ? `
                         <div class="add-item-section">
                             <input type="text" id="itemInput${actualFolderIndex}" placeholder="Add a new task..." />
                             <input type="text" id="tagsInput${actualFolderIndex}" class="tags-input" placeholder="Tags (comma or space separated)..." />
@@ -1367,13 +1548,13 @@
                                             <div class="todo-item ${item.completed ? 'completed' : ''}">
                                                 <input type="checkbox" class="checkbox"
                                                        ${item.completed ? 'checked' : ''}
-                                                       onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})" />
+                                                       ${shareMode && currentShareAccess === 'view' ? 'disabled' : `onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})"`} />
                                                 <span class="todo-text">${item.text}</span>
                                                 ${renderTagBadges(item.tags)}
                                                 ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
                                                 ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
                                                 <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">📝</button>
-                                                <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
+                                                ${shareMode && currentShareAccess === 'view' ? '' : `<button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>`}
                                             </div>
                                             <div class="notes-section" id="notes-${actualFolderIndex}-${item.originalIndex}">
                                                 <textarea class="notes-textarea" id="textarea-${actualFolderIndex}-${item.originalIndex}" placeholder="Add notes or description for this task...">${item.notes || ''}</textarea>
@@ -1703,6 +1884,97 @@
             };
 
             reader.readAsText(file);
+        }
+
+        // ── Share functionality ──────────────────────────────────────────
+
+        let shareMode = false;
+        let currentShareId = null;
+        let currentShareAccess = null;
+        let pendingShareFolderIndex = null;
+        let selectedShareAccess = 'view';
+
+        function openShareModal(folderIndex) {
+            pendingShareFolderIndex = folderIndex;
+            selectedShareAccess = 'view';
+            document.getElementById('viewOption').classList.add('selected');
+            document.getElementById('editOption').classList.remove('selected');
+            document.getElementById('shareLinkSection').style.display = 'none';
+            document.getElementById('copyConfirm').style.display = 'none';
+            document.getElementById('shareModal').style.display = 'flex';
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+            pendingShareFolderIndex = null;
+        }
+
+        function selectShareAccess(access) {
+            selectedShareAccess = access;
+            document.getElementById('viewOption').classList.toggle('selected', access === 'view');
+            document.getElementById('editOption').classList.toggle('selected', access === 'edit');
+            document.getElementById('shareLinkSection').style.display = 'none';
+        }
+
+        async function generateShareLink() {
+            if (pendingShareFolderIndex === null) return;
+            const folder = folders[pendingShareFolderIndex];
+            const shareRef = await db.collection('shared').add({
+                ownerUid: currentUser.uid,
+                folderName: folder.name,
+                items: folder.items,
+                access: selectedShareAccess,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            const url = `${location.origin}${location.pathname}?share=${shareRef.id}`;
+            document.getElementById('shareLinkInput').value = url;
+            document.getElementById('shareLinkSection').style.display = 'block';
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLinkInput');
+            navigator.clipboard.writeText(input.value).then(() => {
+                const confirm = document.getElementById('copyConfirm');
+                confirm.style.display = 'block';
+                setTimeout(() => confirm.style.display = 'none', 2500);
+            });
+        }
+
+        function initSharedMode(shareId) {
+            document.getElementById('authOverlay').style.display = 'none';
+            document.querySelector('.add-folder-section').style.display = 'none';
+            document.querySelector('.search-section').style.display = 'none';
+            document.getElementById('sharedBanner').style.display = 'flex';
+
+            db.collection('shared').doc(shareId).onSnapshot(doc => {
+                if (!doc.exists) {
+                    document.getElementById('foldersContainer').innerHTML =
+                        '<div class="empty-state">This shared link is no longer valid.</div>';
+                    return;
+                }
+                const data = doc.data();
+                currentShareAccess = data.access;
+                folders = [{ name: data.folderName, items: data.items || [] }];
+
+                document.getElementById('sharedFolderTitle').textContent = data.folderName;
+                document.getElementById('sharedAccessLabel').textContent =
+                    data.access === 'edit' ? '✏️ You can edit this folder' : '👁 View only';
+
+                migrateData();
+                renderFolders();
+            });
+        }
+
+        // Modified saveData handles both normal and shared mode
+        const _originalSaveData = saveData;
+
+        // Check for share link on load
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _shareId = _urlParams.get('share');
+        if (_shareId) {
+            shareMode = true;
+            currentShareId = _shareId;
+            initSharedMode(_shareId);
         }
 
         // Initial render happens after auth state resolves
