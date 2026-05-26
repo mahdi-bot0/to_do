@@ -1064,7 +1064,17 @@
         function startRealtimeSync() {
             unsubscribeSnapshot = db.collection('users').doc(currentUser.uid)
                 .onSnapshot(doc => {
-                    folders = doc.exists ? (doc.data().folders || []) : [];
+                    if (!doc.exists) {
+                        // First sign-in: migrate any existing localStorage data
+                        const local = localStorage.getItem('todoFolders');
+                        folders = local ? JSON.parse(local) : [];
+                        if (folders.length > 0) {
+                            db.collection('users').doc(currentUser.uid).set({ folders });
+                            localStorage.removeItem('todoFolders');
+                        }
+                    } else {
+                        folders = doc.data().folders || [];
+                    }
                     migrateData();
                     renderFolders();
                 });
