@@ -1002,9 +1002,9 @@
                     <strong>👁 View only</strong>
                     <p>Can see tasks but not edit them</p>
                 </div>
-                <div class="share-access-option" id="editOption" onclick="selectShareAccess('edit')">
-                    <strong>✏️ Can edit</strong>
-                    <p>Can add, complete &amp; delete tasks</p>
+                <div class="share-access-option" id="editOption" onclick="selectShareAccess('collaborate')">
+                    <strong>🤝 Collaboration</strong>
+                    <p>All changes sync in real-time for everyone</p>
                 </div>
             </div>
             <div id="shareLinkSection" style="display:none">
@@ -1108,7 +1108,6 @@
             unsubscribeSnapshot = db.collection('users').doc(currentUser.uid)
                 .onSnapshot(doc => {
                     if (!doc.exists) {
-                        // First sign-in: migrate any existing localStorage data
                         const local = localStorage.getItem('todoFolders');
                         folders = local ? JSON.parse(local) : [];
                         if (folders.length > 0) {
@@ -1118,6 +1117,12 @@
                     } else {
                         folders = doc.data().folders || [];
                     }
+                    // Re-attach listeners for collaborative folders
+                    folders.forEach(f => {
+                        if (f.collaborative && f.shareId) {
+                            subscribeCollaborativeFolder(f.shareId);
+                        }
+                    });
                     migrateData();
                     renderFolders();
                 });
@@ -1208,7 +1213,13 @@
                 return;
             }
             if (!currentUser) return;
-            db.collection('users').doc(currentUser.uid).set({ folders: folders });
+            db.collection('users').doc(currentUser.uid).set({ folders });
+            // Sync collaborative folders to their shared docs
+            folders.forEach(f => {
+                if (f.collaborative && f.shareId) {
+                    db.collection('shared').doc(f.shareId).update({ items: f.items });
+                }
+            });
         }
 
         // Format date for display
@@ -1995,6 +2006,7 @@
         let currentShareAccess = null;
         let pendingShareFolderIndex = null;
         let selectedShareAccess = 'view';
+        const collabListeners = {};
 
         function openShareModal(folderIndex) {
             pendingShareFolderIndex = folderIndex;
@@ -2020,17 +2032,41 @@
 
         async function generateShareLink() {
             if (pendingShareFolderIndex === null) return;
-            const folder = folders[pendingShareFolderIndex];
+            const fi = pendingShareFolderIndex;
+            const folder = folders[fi];
+            const isCollab = selectedShareAccess === 'collaborate';
+
             const shareRef = await db.collection('shared').add({
                 ownerUid: currentUser.uid,
                 folderName: folder.name,
                 items: folder.items,
-                access: selectedShareAccess,
+                access: 'edit',
+                collaborative: isCollab,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            if (isCollab) {
+                folders[fi].shareId = shareRef.id;
+                folders[fi].collaborative = true;
+                saveData();
+                subscribeCollaborativeFolder(shareRef.id);
+            }
+
             const url = `${location.origin}${location.pathname}?share=${shareRef.id}`;
             document.getElementById('shareLinkInput').value = url;
             document.getElementById('shareLinkSection').style.display = 'block';
+        }
+
+        function subscribeCollaborativeFolder(shareId) {
+            if (collabListeners[shareId]) return;
+            collabListeners[shareId] = db.collection('shared').doc(shareId)
+                .onSnapshot(doc => {
+                    if (!doc.exists) return;
+                    const fi = folders.findIndex(f => f.shareId === shareId);
+                    if (fi < 0) return;
+                    folders[fi].items = doc.data().items || [];
+                    renderFolders();
+                });
         }
 
         function copyShareLink() {
