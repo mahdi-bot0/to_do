@@ -711,6 +711,56 @@
             border: 2px solid rgba(255,255,255,0.5);
         }
 
+        .edit-item-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            opacity: 0.5;
+            transition: opacity 0.3s, transform 0.2s;
+        }
+
+        .edit-item-btn:hover {
+            opacity: 1;
+            background: transparent;
+            transform: scale(1.1);
+        }
+
+        .todo-item.edit-mode {
+            flex-wrap: wrap;
+            gap: 8px;
+            background: var(--input-bg);
+            border: 2px solid var(--input-border-focus);
+            border-radius: 5px;
+        }
+
+        .edit-name-input {
+            flex: 1;
+            min-width: 180px;
+            padding: 6px 10px;
+            font-size: 15px;
+        }
+
+        .edit-tags-input-inline {
+            min-width: 140px;
+            padding: 6px 10px;
+            font-size: 14px;
+            border: 2px solid var(--input-border);
+            border-radius: 5px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .edit-date-input {
+            padding: 6px 10px;
+            font-size: 14px;
+            border: 2px solid var(--input-border);
+            border-radius: 5px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
         .share-btn {
             background: #10b981;
             padding: 8px 16px;
@@ -1555,7 +1605,7 @@
                                     '<div class="empty-state">No tasks match the current filter</div>' :
                                     getFilteredAndSortedItems(folder.items, actualFolderIndex).map((item) => `
                                         <li class="todo-item-wrapper">
-                                            <div class="todo-item ${item.completed ? 'completed' : ''}">
+                                            <div class="todo-item ${item.completed ? 'completed' : ''}" id="todoItem-${actualFolderIndex}-${item.originalIndex}">
                                                 <input type="checkbox" class="checkbox"
                                                        ${item.completed ? 'checked' : ''}
                                                        ${shareMode && currentShareAccess === 'view' ? 'disabled' : `onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})"`} />
@@ -1564,7 +1614,10 @@
                                                 ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
                                                 ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
                                                 <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">📝</button>
-                                                ${shareMode && currentShareAccess === 'view' ? '' : `<button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>`}
+                                                ${shareMode && currentShareAccess === 'view' ? '' : `
+                                                    <button class="edit-item-btn" onclick="editItem(${actualFolderIndex}, ${item.originalIndex})" title="Edit task">✏️</button>
+                                                    <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
+                                                `}
                                             </div>
                                             <div class="notes-section" id="notes-${actualFolderIndex}-${item.originalIndex}">
                                                 <textarea class="notes-textarea" id="textarea-${actualFolderIndex}-${item.originalIndex}" placeholder="Add notes or description for this task...">${item.notes || ''}</textarea>
@@ -1894,6 +1947,51 @@
             };
 
             reader.readAsText(file);
+        }
+
+        // ── Inline task editing ──────────────────────────────────────────
+
+        function escapeAttr(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        }
+
+        function editItem(folderIndex, itemIndex) {
+            const item = folders[folderIndex].items[itemIndex];
+            const itemDiv = document.getElementById(`todoItem-${folderIndex}-${itemIndex}`);
+            if (!itemDiv) return;
+
+            const tagsStr = (item.tags || []).join(', ');
+            itemDiv.classList.add('edit-mode');
+            itemDiv.innerHTML = `
+                <input type="text" class="edit-name-input" id="editName-${folderIndex}-${itemIndex}"
+                       value="${escapeAttr(item.text)}" placeholder="Task name..." />
+                <input type="text" class="edit-tags-input-inline" id="editTags-${folderIndex}-${itemIndex}"
+                       value="${escapeAttr(tagsStr)}" placeholder="Tags (comma separated)..." />
+                <input type="date" class="edit-date-input" id="editDate-${folderIndex}-${itemIndex}"
+                       value="${item.dueDate || ''}" />
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button class="notes-cancel-btn" onclick="renderFolders()">Cancel</button>
+                    <button class="notes-save-btn" onclick="saveItemEdit(${folderIndex}, ${itemIndex})">Save</button>
+                </div>
+            `;
+            document.getElementById(`editName-${folderIndex}-${itemIndex}`).focus();
+        }
+
+        function saveItemEdit(folderIndex, itemIndex) {
+            const nameInput = document.getElementById(`editName-${folderIndex}-${itemIndex}`);
+            const tagsInput = document.getElementById(`editTags-${folderIndex}-${itemIndex}`);
+            const dateInput = document.getElementById(`editDate-${folderIndex}-${itemIndex}`);
+            if (!nameInput) return;
+
+            const newText = nameInput.value.trim();
+            if (!newText) { alert('Task name cannot be empty'); return; }
+
+            folders[folderIndex].items[itemIndex].text = newText;
+            folders[folderIndex].items[itemIndex].tags = parseTags(tagsInput.value);
+            folders[folderIndex].items[itemIndex].dueDate = dateInput.value || null;
+
+            saveData();
+            renderFolders();
         }
 
         // ── Share functionality ──────────────────────────────────────────
