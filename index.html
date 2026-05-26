@@ -289,6 +289,9 @@
             color: var(--text-secondary);
             margin-left: 12px;
             white-space: nowrap;
+            min-width: 95px;
+            display: inline-block;
+            text-align: right;
             transition: color 0.3s ease;
         }
 
@@ -409,13 +412,23 @@
             font-size: 20px;
             border: none;
             cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.3s;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
 
         .delete-item-btn:hover {
             opacity: 1;
             background: transparent;
+        }
+
+        .todo-item:hover .delete-item-btn,
+        .todo-item:hover .edit-item-btn,
+        .todo-item:hover .notes-btn {
+            opacity: 1;
+        }
+
+        .notes-btn.has-notes {
+            opacity: 1 !important;
         }
 
         .notes-btn {
@@ -424,8 +437,8 @@
             cursor: pointer;
             font-size: 18px;
             padding: 4px 8px;
-            opacity: 0.5;
-            transition: opacity 0.3s, transform 0.2s;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
             margin-left: 4px;
         }
 
@@ -433,11 +446,6 @@
             opacity: 1;
             background: transparent;
             transform: scale(1.1);
-        }
-
-        .notes-btn.has-notes {
-            opacity: 1;
-            filter: brightness(1.2) saturate(1.5);
         }
 
         .notes-section {
@@ -713,8 +721,8 @@
             cursor: pointer;
             font-size: 16px;
             padding: 4px 8px;
-            opacity: 0.5;
-            transition: opacity 0.3s, transform 0.2s;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
         }
 
         .edit-item-btn:hover {
@@ -1595,8 +1603,8 @@
                                             <span class="todo-text">${currentSearchQuery ? highlightText(item.text, currentSearchQuery) : item.text}</span>
                                             ${renderTagBadges(item.tags)}
                                             ${getPriorityBadge(item.priority, actualFolderIndex, itemIndex)}
-                                            ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                            <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${itemIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">📝</button>
+                                            <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
+                                            <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${itemIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
                                             <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${itemIndex})">&times;</button>
                                         </div>
                                         <div class="notes-section" id="notes-${actualFolderIndex}-${itemIndex}">
@@ -1621,8 +1629,8 @@
                                                 <span class="todo-text">${item.text}</span>
                                                 ${renderTagBadges(item.tags)}
                                                 ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
-                                                ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                                <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">📝</button>
+                                                <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
+                                                <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
                                                 ${shareMode && currentShareAccess === 'view' ? '' : `
                                                     <button class="edit-item-btn" onclick="editItem(${actualFolderIndex}, ${item.originalIndex})" title="Edit task">✏️</button>
                                                     <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
