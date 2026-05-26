@@ -1058,7 +1058,11 @@
                 <span class="shared-badge">Shared Folder</span>
                 <span id="sharedFolderTitle" style="margin-left:12px;font-weight:600;color:var(--text-primary)"></span>
             </div>
-            <span id="sharedAccessLabel" style="font-size:13px;color:var(--text-secondary)"></span>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span id="sharedAccessLabel" style="font-size:13px;color:var(--text-secondary)"></span>
+                <button class="modal-close-btn" style="font-size:13px;padding:6px 12px" onclick="leaveSharedFolder()">Leave</button>
+                <button class="delete-btn" style="font-size:13px;padding:6px 12px" onclick="deleteSharedForEveryone()">Delete for everyone</button>
+            </div>
         </div>
 
         <div class="add-folder-section">
@@ -2055,6 +2059,16 @@
             const url = `${location.origin}${location.pathname}?share=${shareRef.id}`;
             document.getElementById('shareLinkInput').value = url;
             document.getElementById('shareLinkSection').style.display = 'block';
+        }
+
+        function leaveSharedFolder() {
+            window.location.href = location.origin + location.pathname;
+        }
+
+        async function deleteSharedForEveryone() {
+            if (!confirm('Delete this shared folder for everyone? This cannot be undone.')) return;
+            await db.collection('shared').doc(currentShareId).delete();
+            window.location.href = location.origin + location.pathname;
         }
 
         function subscribeCollaborativeFolder(shareId) {
