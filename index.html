@@ -1242,9 +1242,7 @@
             .mobile-dot.high { background: #dc2626; }
             .mobile-dot.medium { background: #d97706; }
             .mobile-dot.notes { background: #667eea; }
-        }
 
-        @media (max-width: 600px) {
             header h1 {
                 font-size: 2em;
             }
@@ -1961,6 +1959,85 @@
             return dots.length ? `<span class="mobile-indicator">${dots.join('')}</span>` : '';
         }
 
+        function renderNotesSection(fi, ii, item) {
+            return `<div class="notes-section" id="notes-${fi}-${ii}">
+                <textarea class="notes-textarea" id="textarea-${fi}-${ii}" placeholder="Add notes or description for this task...">${item.notes || ''}</textarea>
+                <div class="notes-actions">
+                    <button class="notes-cancel-btn" onclick="cancelNotes(${fi},${ii})">Cancel</button>
+                    <button class="notes-save-btn" onclick="saveNotes(${fi},${ii})">Save</button>
+                </div>
+            </div>`;
+        }
+
+        function renderSubtasksSection(fi, ii, item) {
+            const subs = item.subtasks || [];
+            return `<div class="subtasks-section" id="subtasks-${fi}-${ii}">
+                <div class="add-subtask-row">
+                    <input type="text" class="subtask-input" id="subtaskInput-${fi}-${ii}" placeholder="Add a subtask..." onkeypress="if(event.key==='Enter')addSubtask(${fi},${ii})" />
+                    <button class="subtask-add-btn" onclick="addSubtask(${fi},${ii})">Add</button>
+                </div>
+                <ul class="subtask-list">
+                    ${subs.map((sub, si) => `
+                        <li class="subtask-item ${sub.completed ? 'completed' : ''}">
+                            <input type="checkbox" class="checkbox" style="width:18px;height:18px;flex-shrink:0" ${sub.completed ? 'checked' : ''} onchange="toggleSubtask(${fi},${ii},${si})" />
+                            <span>${sub.text}</span>
+                            <button class="subtask-delete-btn" onclick="deleteSubtask(${fi},${ii},${si})">×</button>
+                        </li>`).join('')}
+                </ul>
+            </div>`;
+        }
+
+        function renderMobilePanel(item, fi, ii, panelId, opts) {
+            const subs = item.subtasks || [];
+            const subLabel = subs.length ? `${subs.filter(s=>s.completed).length}/${subs.length} subtasks` : '+ subtask';
+            return `<div class="mobile-details-panel" id="mobile-details-${panelId}">
+                <div class="mobile-details-row">
+                    ${opts.folderBadge ? `<span class="folder-name-badge">${opts.folderBadge}</span>` : ''}
+                    ${renderTagBadges(item.tags)}
+                    ${getPriorityBadge(item.priority, fi, ii)}
+                    ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
+                </div>
+                <div class="mobile-actions-row">
+                    <button class="subtask-btn ${subs.length ? 'has-subtasks' : ''}" onclick="toggleSubtasks(${fi},${ii})" title="Subtasks">${subLabel}</button>
+                    <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${fi},${ii})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
+                    ${opts.viewOnly ? '' : `
+                        <button class="edit-item-btn" onclick="editItem(${fi},${ii})" title="Edit task">✏️</button>
+                        <button class="delete-item-btn" onclick="deleteItem(${fi},${ii})">&times;</button>`}
+                </div>
+            </div>`;
+        }
+
+        function renderTodoItem(item, fi, ii, opts) {
+            const subs = item.subtasks || [];
+            const subLabel = subs.length ? `${subs.filter(s=>s.completed).length}/${subs.length} subtasks` : '+ subtask';
+            const panelId = opts.search ? `search-${fi}-${ii}` : `${fi}-${ii}`;
+            const text = opts.highlight ? highlightText(item.text, opts.highlight) : item.text;
+            const chk = opts.viewOnly ? 'disabled' : `onchange="toggleItem(${fi},${ii})"`;
+            const dragAttrs = opts.search ? '' : `draggable="true" ondragstart="dragStart(event,${fi},${ii})" ondragover="dragOver(event)" ondrop="dropItem(event,${fi},${ii})" ondragend="dragEnd(event)"`;
+            return `<li class="todo-item-wrapper" ${dragAttrs}>
+                <div class="todo-item ${item.completed ? 'completed' : ''}" ${opts.search ? '' : `id="todoItem-${fi}-${ii}"`}>
+                    <input type="checkbox" class="checkbox" ${item.completed ? 'checked' : ''} ${chk} />
+                    ${opts.search ? `<span class="folder-name-badge mobile-details">${opts.folderName}</span>` : ''}
+                    <span class="todo-text">${text}</span>
+                    ${getMobileIndicators(item)}
+                    <span class="mobile-details">
+                        ${renderTagBadges(item.tags)}
+                        ${getPriorityBadge(item.priority, fi, ii)}
+                        <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
+                        ${opts.search ? '' : `<button class="subtask-btn ${subs.length ? 'has-subtasks' : ''}" onclick="toggleSubtasks(${fi},${ii})" title="Subtasks">${subLabel}</button>`}
+                        <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${fi},${ii})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
+                        ${opts.viewOnly ? '' : `
+                            <button class="edit-item-btn" onclick="editItem(${fi},${ii})" title="Edit task">✏️</button>
+                            <button class="delete-item-btn" onclick="deleteItem(${fi},${ii})">&times;</button>`}
+                    </span>
+                    <button class="mobile-expand-btn" onclick="toggleMobileDetails(this,'${panelId}')" title="Show details">⌄</button>
+                </div>
+                ${renderMobilePanel(item, fi, ii, panelId, { folderBadge: opts.search ? opts.folderName : '', viewOnly: opts.viewOnly })}
+                ${renderNotesSection(fi, ii, item)}
+                ${opts.search ? '' : renderSubtasksSection(fi, ii, item)}
+            </li>`;
+        }
+
         // Filter tasks by tag
         function filterByTag(tag) {
             currentTagFilter = tag;
@@ -2235,116 +2312,23 @@
                         <ul class="todo-list">
                             ${(currentSearchQuery || currentTagFilter) ?
                                 // Search/filter mode: show matching items with highlights
-                                folder.items.map((item) => {
-                                    const itemIndex = folders[actualFolderIndex].items.indexOf(folders[actualFolderIndex].items.find(i => i.text === item.text && i.completed === item.completed));
-                                    return `
-                                    <li class="todo-item-wrapper">
-                                        <div class="todo-item ${item.completed ? 'completed' : ''}">
-                                            <input type="checkbox" class="checkbox"
-                                                   ${item.completed ? 'checked' : ''}
-                                                   onchange="toggleItem(${actualFolderIndex}, ${itemIndex})" />
-                                            <span class="folder-name-badge mobile-details">${folder.name}</span>
-                                            <span class="todo-text">${currentSearchQuery ? highlightText(item.text, currentSearchQuery) : item.text}</span>
-                                            ${getMobileIndicators(item)}
-                                            <span class="mobile-details">
-                                                ${renderTagBadges(item.tags)}
-                                                ${getPriorityBadge(item.priority, actualFolderIndex, itemIndex)}
-                                                <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
-                                                <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${itemIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
-                                                <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${itemIndex})">&times;</button>
-                                            </span>
-                                            <button class="mobile-expand-btn" onclick="toggleMobileDetails(this, 'search-${actualFolderIndex}-${itemIndex}')" title="Show details">⌄</button>
-                                        </div>
-                                        <div class="mobile-details-panel" id="mobile-details-search-${actualFolderIndex}-${itemIndex}">
-                                            <div class="mobile-details-row">
-                                                <span class="folder-name-badge">${folder.name}</span>
-                                                ${renderTagBadges(item.tags)}
-                                                ${getPriorityBadge(item.priority, actualFolderIndex, itemIndex)}
-                                                ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                            </div>
-                                            <div class="mobile-actions-row">
-                                                <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${itemIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
-                                                <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${itemIndex})">&times;</button>
-                                            </div>
-                                        </div>
-                                        <div class="notes-section" id="notes-${actualFolderIndex}-${itemIndex}">
-                                            <textarea class="notes-textarea" id="textarea-${actualFolderIndex}-${itemIndex}" placeholder="Add notes or description for this task...">${item.notes || ''}</textarea>
-                                            <div class="notes-actions">
-                                                <button class="notes-cancel-btn" onclick="cancelNotes(${actualFolderIndex}, ${itemIndex})">Cancel</button>
-                                                <button class="notes-save-btn" onclick="saveNotes(${actualFolderIndex}, ${itemIndex})">Save</button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                `}).join('')
+                                folder.items.map((item, _idx) => {
+                                    const itemIndex = folders[actualFolderIndex].items.findIndex(i => i === item || (i.text === item.text && i.completed === item.completed));
+                                    return renderTodoItem(item, actualFolderIndex, itemIndex, {
+                                        search: true,
+                                        folderName: folder.name,
+                                        highlight: currentSearchQuery || null
+                                    });
+                                }).join('')
                                 :
                                 // Normal mode: show filtered and sorted items
                                 (getFilteredAndSortedItems(folder.items, actualFolderIndex).length === 0 ?
                                     '<div class="empty-state">No tasks match the current filter</div>' :
-                                    getFilteredAndSortedItems(folder.items, actualFolderIndex).map((item) => `
-                                        <li class="todo-item-wrapper"
-                                            draggable="true"
-                                            ondragstart="dragStart(event,${actualFolderIndex},${item.originalIndex})"
-                                            ondragover="dragOver(event)"
-                                            ondrop="dropItem(event,${actualFolderIndex},${item.originalIndex})"
-                                            ondragend="dragEnd(event)">
-                                            <div class="todo-item ${item.completed ? 'completed' : ''}" id="todoItem-${actualFolderIndex}-${item.originalIndex}">
-                                                <input type="checkbox" class="checkbox"
-                                                       ${item.completed ? 'checked' : ''}
-                                                       ${shareMode && currentShareAccess === 'view' ? 'disabled' : `onchange="toggleItem(${actualFolderIndex}, ${item.originalIndex})"`} />
-                                                <span class="todo-text">${item.text}</span>
-                                                ${getMobileIndicators(item)}
-                                                <span class="mobile-details">
-                                                    ${renderTagBadges(item.tags)}
-                                                    ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
-                                                    <span class="due-date ${getDueDateClass(item.dueDate)}">${item.dueDate ? formatDate(item.dueDate) : ''}</span>
-                                                    <button class="subtask-btn ${(item.subtasks||[]).length>0?'has-subtasks':''}" onclick="toggleSubtasks(${actualFolderIndex},${item.originalIndex})" title="Subtasks">${(item.subtasks||[]).length>0?`${(item.subtasks||[]).filter(s=>s.completed).length}/${(item.subtasks||[]).length} subtasks`:'+ subtask'}</button>
-                                                    <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
-                                                    ${shareMode && currentShareAccess === 'view' ? '' : `
-                                                        <button class="edit-item-btn" onclick="editItem(${actualFolderIndex}, ${item.originalIndex})" title="Edit task">✏️</button>
-                                                        <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
-                                                    `}
-                                                </span>
-                                                <button class="mobile-expand-btn" onclick="toggleMobileDetails(this, '${actualFolderIndex}-${item.originalIndex}')" title="Show details">⌄</button>
-                                            </div>
-                                            <div class="mobile-details-panel" id="mobile-details-${actualFolderIndex}-${item.originalIndex}">
-                                                <div class="mobile-details-row">
-                                                    ${renderTagBadges(item.tags)}
-                                                    ${getPriorityBadge(item.priority, actualFolderIndex, item.originalIndex)}
-                                                    ${item.dueDate ? `<span class="due-date ${getDueDateClass(item.dueDate)}">${formatDate(item.dueDate)}</span>` : ''}
-                                                </div>
-                                                <div class="mobile-actions-row">
-                                                    <button class="subtask-btn ${(item.subtasks||[]).length>0?'has-subtasks':''}" onclick="toggleSubtasks(${actualFolderIndex},${item.originalIndex})" title="Subtasks">${(item.subtasks||[]).length>0?`${(item.subtasks||[]).filter(s=>s.completed).length}/${(item.subtasks||[]).length} subtasks`:'+ subtask'}</button>
-                                                    <button class="notes-btn ${item.notes ? 'has-notes' : ''}" onclick="toggleNotes(${actualFolderIndex}, ${item.originalIndex})" title="${item.notes ? 'View/edit notes' : 'Add notes'}">💬</button>
-                                                    ${shareMode && currentShareAccess === 'view' ? '' : `
-                                                        <button class="edit-item-btn" onclick="editItem(${actualFolderIndex}, ${item.originalIndex})" title="Edit task">✏️</button>
-                                                        <button class="delete-item-btn" onclick="deleteItem(${actualFolderIndex}, ${item.originalIndex})">&times;</button>
-                                                    `}
-                                                </div>
-                                            </div>
-                                            <div class="notes-section" id="notes-${actualFolderIndex}-${item.originalIndex}">
-                                                <textarea class="notes-textarea" id="textarea-${actualFolderIndex}-${item.originalIndex}" placeholder="Add notes or description for this task...">${item.notes || ''}</textarea>
-                                                <div class="notes-actions">
-                                                    <button class="notes-cancel-btn" onclick="cancelNotes(${actualFolderIndex}, ${item.originalIndex})">Cancel</button>
-                                                    <button class="notes-save-btn" onclick="saveNotes(${actualFolderIndex}, ${item.originalIndex})">Save</button>
-                                                </div>
-                                            </div>
-                                            <div class="subtasks-section" id="subtasks-${actualFolderIndex}-${item.originalIndex}">
-                                                <div class="add-subtask-row">
-                                                    <input type="text" class="subtask-input" id="subtaskInput-${actualFolderIndex}-${item.originalIndex}" placeholder="Add a subtask..." onkeypress="if(event.key==='Enter')addSubtask(${actualFolderIndex},${item.originalIndex})" />
-                                                    <button class="subtask-add-btn" onclick="addSubtask(${actualFolderIndex},${item.originalIndex})">Add</button>
-                                                </div>
-                                                <ul class="subtask-list">
-                                                    ${(item.subtasks||[]).map((sub,si) => `
-                                                        <li class="subtask-item ${sub.completed?'completed':''}">
-                                                            <input type="checkbox" class="checkbox" style="width:18px;height:18px;flex-shrink:0" ${sub.completed?'checked':''} onchange="toggleSubtask(${actualFolderIndex},${item.originalIndex},${si})" />
-                                                            <span>${sub.text}</span>
-                                                            <button class="subtask-delete-btn" onclick="deleteSubtask(${actualFolderIndex},${item.originalIndex},${si})">×</button>
-                                                        </li>
-                                                    `).join('')}
-                                                </ul>
-                                            </div>
-                                        </li>
-                                    `).join('')
+                                    getFilteredAndSortedItems(folder.items, actualFolderIndex).map((item) =>
+                                        renderTodoItem(item, actualFolderIndex, item.originalIndex, {
+                                            viewOnly: shareMode && currentShareAccess === 'view'
+                                        })
+                                    ).join('')
                                 )
                             }
                         </ul>
@@ -2882,9 +2866,6 @@
                 renderFolders();
             });
         }
-
-        // Modified saveData handles both normal and shared mode
-        const _originalSaveData = saveData;
 
         function formatViewerDate(timestamp) {
             if (!timestamp) return 'Unknown';
