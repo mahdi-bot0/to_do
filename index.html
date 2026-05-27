@@ -8,8 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
+        /* =============================================
+           VARIABLES & RESET
+        ============================================= */
+
         :root {
-            /* Light mode colors */
             --bg-gradient-start: #667eea;
             --bg-gradient-end: #764ba2;
             --header-text: #ffffff;
@@ -53,6 +56,10 @@
             --footer-text: #6b7280;
             --shadow: rgba(0, 0, 0, 0.3);
         }
+
+        /* =============================================
+           LAYOUT & BASE
+        ============================================= */
 
         * {
             margin: 0;
@@ -147,6 +154,10 @@
             display: none;
         }
 
+        /* =============================================
+           INPUTS & FORMS
+        ============================================= */
+
         .add-folder-section {
             background: var(--card-bg);
             padding: 20px;
@@ -202,6 +213,10 @@
             background: #dc2626;
         }
 
+        /* =============================================
+           FOLDER
+        ============================================= */
+
         .folders-container {
             display: grid;
             gap: 20px;
@@ -242,6 +257,10 @@
             gap: 10px;
             margin-bottom: 20px;
         }
+
+        /* =============================================
+           TODO ITEMS
+        ============================================= */
 
         .todo-list {
             list-style: none;
@@ -445,7 +464,6 @@
 
         .delete-item-btn:hover {
             opacity: 1;
-            background: transparent;
         }
 
         .todo-item:hover .delete-item-btn,
@@ -455,7 +473,7 @@
         }
 
         .notes-btn.has-notes {
-            opacity: 1 !important;
+            opacity: 1;
         }
 
         .notes-btn {
@@ -470,10 +488,12 @@
         }
 
         .notes-btn:hover {
-            opacity: 1;
-            background: transparent;
             transform: scale(1.1);
         }
+
+        /* =============================================
+           NOTES
+        ============================================= */
 
         .notes-section {
             display: none;
@@ -576,6 +596,10 @@
             transition: color 0.3s ease;
         }
 
+        /* =============================================
+           SEARCH
+        ============================================= */
+
         .search-section {
             background: var(--card-bg);
             padding: 20px;
@@ -630,7 +654,6 @@
 
         .clear-search-btn:hover {
             color: var(--text-primary);
-            background: transparent;
         }
 
         .clear-search-btn.visible {
@@ -673,6 +696,10 @@
             padding: 40px 20px;
             font-size: 16px;
         }
+
+        /* =============================================
+           AUTH & MODALS
+        ============================================= */
 
         .auth-overlay {
             position: fixed;
@@ -753,8 +780,6 @@
         }
 
         .edit-item-btn:hover {
-            opacity: 1;
-            background: transparent;
             transform: scale(1.1);
         }
 
@@ -865,6 +890,10 @@
             margin: 0;
         }
 
+        /* =============================================
+           SHARE & VIEWERS
+        ============================================= */
+
         .viewers-btn {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -881,7 +910,9 @@
             transition: background 0.2s;
         }
 
-        .viewers-btn:hover { background: rgba(255,255,255,0.35); }
+        .viewers-btn:hover {
+            background: rgba(255,255,255,0.35);
+        }
 
         .viewer-item {
             display: flex;
@@ -891,7 +922,9 @@
             border-bottom: 1px solid var(--input-border);
         }
 
-        .viewer-item:last-child { border-bottom: none; }
+        .viewer-item:last-child {
+            border-bottom: none;
+        }
 
         .viewer-avatar {
             width: 42px;
@@ -915,7 +948,9 @@
             flex-shrink: 0;
         }
 
-        .viewer-info { flex: 1; }
+        .viewer-info {
+            flex: 1;
+        }
 
         .viewer-name {
             display: block;
@@ -1011,7 +1046,10 @@
             margin-bottom: 16px;
         }
 
-        /* Progress bar */
+        /* =============================================
+           FOLDER HEADER EXTRAS
+        ============================================= */
+
         .progress-bar-container {
             flex: 1;
             height: 4px;
@@ -1034,7 +1072,6 @@
             white-space: nowrap;
         }
 
-        /* Color picker */
         .color-picker-btn {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -1069,7 +1106,9 @@
             width: 168px;
         }
 
-        .color-palette.open { display: flex; }
+        .color-palette.open {
+            display: flex;
+        }
 
         .color-swatch {
             width: 30px;
@@ -1080,10 +1119,15 @@
             transition: transform 0.15s, border-color 0.15s;
         }
 
-        .color-swatch:hover { transform: scale(1.15); }
-        .color-swatch.active { border-color: var(--text-primary); transform: scale(1.1); }
+        .color-swatch:hover {
+            transform: scale(1.15);
+        }
 
-        /* Folder rename */
+        .color-swatch.active {
+            border-color: var(--text-primary);
+            transform: scale(1.1);
+        }
+
         .folder-rename-btn {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -1121,14 +1165,28 @@
             min-width: 200px;
         }
 
-        .folder-name-edit-input::placeholder { color: rgba(255,255,255,0.6); }
-        .folder-name-edit-input:focus { border-color: white; background: rgba(255,255,255,0.25); }
+        .folder-name-edit-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .folder-name-edit-input:focus {
+            border-color: white;
+            background: rgba(255,255,255,0.25);
+        }
 
         /* Drag and drop */
-        .todo-item-wrapper.dragging { opacity: 0.4; }
-        .todo-item-wrapper.drag-over { border-top: 2px solid var(--button-bg); }
+        .todo-item-wrapper.dragging {
+            opacity: 0.4;
+        }
 
-        /* Subtask button */
+        .todo-item-wrapper.drag-over {
+            border-top: 2px solid var(--button-bg);
+        }
+
+        /* =============================================
+           SUBTASKS
+        ============================================= */
+
         .subtask-btn {
             background: transparent;
             border: 1px solid var(--input-border);
@@ -1143,9 +1201,19 @@
             white-space: nowrap;
         }
 
-        .subtask-btn:hover { background: var(--item-bg-hover); }
-        .subtask-btn.has-subtasks { opacity: 1 !important; color: var(--button-bg); border-color: var(--button-bg); }
-        .todo-item:hover .subtask-btn { opacity: 1; }
+        .subtask-btn:hover {
+            background: var(--item-bg-hover);
+        }
+
+        .subtask-btn.has-subtasks {
+            opacity: 1;
+            color: var(--button-bg);
+            border-color: var(--button-bg);
+        }
+
+        .todo-item:hover .subtask-btn {
+            opacity: 1;
+        }
 
         /* Subtasks section */
         .subtasks-section {
@@ -1157,7 +1225,9 @@
             border: 1px solid var(--input-border);
         }
 
-        .subtasks-section.expanded { display: block; }
+        .subtasks-section.expanded {
+            display: block;
+        }
 
         .add-subtask-row {
             display: flex;
@@ -1175,11 +1245,23 @@
             color: var(--text-primary);
         }
 
-        .subtask-input:focus { outline: none; border-color: var(--input-border-focus); }
+        .subtask-input:focus {
+            outline: none;
+            border-color: var(--input-border-focus);
+        }
 
-        .subtask-add-btn { padding: 6px 14px; font-size: 13px; border-radius: 4px; }
+        .subtask-add-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
 
-        .subtask-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .subtask-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
 
         .subtask-item {
             display: flex;
@@ -1188,8 +1270,16 @@
             padding: 4px 0;
         }
 
-        .subtask-item.completed span { text-decoration: line-through; color: var(--text-secondary); }
-        .subtask-item span { flex: 1; font-size: 14px; color: var(--text-primary); }
+        .subtask-item.completed span {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .subtask-item span {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
 
         .subtask-delete-btn {
             background: transparent;
@@ -1202,7 +1292,9 @@
             transition: opacity 0.2s;
         }
 
-        .subtask-item:hover .subtask-delete-btn { opacity: 1; }
+        .subtask-item:hover .subtask-delete-btn {
+            opacity: 1;
+        }
 
         .mobile-expand-btn {
             display: none;
@@ -1212,15 +1304,13 @@
             display: contents;
         }
 
-        /* Hidden on desktop; shown only inside mobile media query */
-        .mobile-details-panel {
-            display: none;
-        }
+        /* Hidden on desktop; shown only on mobile */
+        .mobile-details-panel { display: none; }
+        .mobile-indicator      { display: none; }
 
-        /* Inline dot indicators for mobile compact row */
-        .mobile-indicator {
-            display: none;
-        }
+        /* =============================================
+           MOBILE  (max-width: 600px)
+        ============================================= */
 
         @media (max-width: 600px) {
             .mobile-indicator {
