@@ -1398,7 +1398,13 @@
                 padding-top: 10px;
             }
 
-            /* All folder header buttons: auto width, no stretching */
+            /* Folder header: stack name and buttons vertically so buttons don't overflow */
+            .folder-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
             .folder-header button {
                 width: auto;
                 flex-shrink: 0;
