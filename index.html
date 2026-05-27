@@ -1212,11 +1212,9 @@
             display: contents;
         }
 
-        /* Fix: action buttons in mobile details panel must always be visible */
-        .mobile-details-panel .delete-item-btn,
-        .mobile-details-panel .edit-item-btn,
-        .mobile-details-panel .notes-btn {
-            opacity: 1;
+        /* Hidden on desktop; shown only inside mobile media query */
+        .mobile-details-panel {
+            display: none;
         }
 
         /* Inline dot indicators for mobile compact row */
@@ -1400,21 +1398,13 @@
                 padding-top: 10px;
             }
 
-            .mobile-actions-row button {
-                width: auto;
-                padding: 8px 16px;
-                font-size: 14px;
-                border-radius: 8px;
-                opacity: 1;
-            }
-
-            /* Fix 1: folder header buttons must not go full-width */
+            /* All folder header buttons: auto width, no stretching */
             .folder-header button {
                 width: auto;
                 flex-shrink: 0;
             }
 
-            /* Fix 2: action buttons in details panel — consistent height & clear styling */
+            /* Action buttons in expanded details panel */
             .mobile-actions-row button {
                 width: auto;
                 height: 40px;
@@ -1427,15 +1417,27 @@
                 justify-content: center;
             }
 
+            /* Delete: solid red so it's clearly visible; hide × and show label */
             .mobile-details-panel .delete-item-btn {
                 background: #ef4444;
-                color: white;
+                color: transparent;
                 opacity: 1;
+                position: relative;
+                min-width: 80px;
+            }
+
+            .mobile-details-panel .delete-item-btn::after {
+                content: "🗑️ Delete";
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                position: absolute;
             }
 
             .mobile-details-panel .edit-item-btn {
                 background: var(--item-bg-hover);
                 opacity: 1;
+                font-size: 18px;
             }
 
             .mobile-details-panel .notes-btn {
