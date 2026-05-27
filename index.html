@@ -1408,34 +1408,67 @@
                 opacity: 1;
             }
 
-            /* Make action buttons in details panel visible and styled */
-            .mobile-details-panel .delete-item-btn {
-                background: #fee2e2;
-                color: #dc2626;
+            /* Fix 1: folder header buttons must not go full-width */
+            .folder-header button {
+                width: auto;
+                flex-shrink: 0;
+            }
+
+            /* Fix 2: action buttons in details panel — consistent height & clear styling */
+            .mobile-actions-row button {
+                width: auto;
+                height: 40px;
+                padding: 0 14px;
+                font-size: 15px;
                 border-radius: 8px;
-                padding: 8px 14px;
-                font-size: 14px;
+                opacity: 1;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .mobile-details-panel .delete-item-btn {
+                background: #ef4444;
+                color: white;
                 opacity: 1;
             }
 
             .mobile-details-panel .edit-item-btn {
                 background: var(--item-bg-hover);
-                border-radius: 8px;
-                padding: 8px 14px;
-                font-size: 14px;
                 opacity: 1;
             }
 
             .mobile-details-panel .notes-btn {
                 font-size: 18px;
-                padding: 6px 12px;
                 opacity: 1;
             }
 
             .mobile-details-panel .subtask-btn {
                 opacity: 1;
-                padding: 6px 12px;
                 font-size: 13px;
+            }
+
+            /* Fix 3: edit mode — stack vertically, fix button alignment */
+            .todo-item.edit-mode {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .todo-item.edit-mode input {
+                width: 100%;
+            }
+
+            .todo-item.edit-mode > div:last-child {
+                display: flex;
+                margin-left: 0 !important;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+
+            .todo-item.edit-mode button {
+                width: auto;
+                height: 40px;
+                padding: 0 16px;
             }
         }
     </style>
