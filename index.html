@@ -316,6 +316,33 @@
             transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
         }
 
+        .date-picker-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .date-picker-wrapper input[type="date"] {
+            width: 100%;
+        }
+
+        .date-picker-placeholder {
+            position: absolute;
+            left: 12px;
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+
+        .date-picker-wrapper.has-date .date-picker-placeholder {
+            display: none;
+        }
+
+        .date-picker-wrapper:not(.has-date) input[type="date"] {
+            color: transparent;
+        }
+
         input[type="date"]:focus,
         select:focus {
             outline: none;
@@ -2028,7 +2055,10 @@
                         <div class="add-item-section">
                             <input type="text" id="itemInput${actualFolderIndex}" placeholder="Add a new task..." />
                             <input type="text" id="tagsInput${actualFolderIndex}" class="tags-input" placeholder="Tags (comma or space separated)..." />
-                            <input type="date" id="dateInput${actualFolderIndex}" />
+                            <div class="date-picker-wrapper" id="dateWrapper${actualFolderIndex}">
+                                <input type="date" id="dateInput${actualFolderIndex}" onchange="this.closest('.date-picker-wrapper').classList.toggle('has-date', !!this.value)" />
+                                <span class="date-picker-placeholder">📅 Due date</span>
+                            </div>
                             <select id="priorityInput${actualFolderIndex}" class="priority-select">
                                 <option value="low">Low Priority</option>
                                 <option value="medium" selected>Medium Priority</option>
@@ -2245,6 +2275,7 @@
             input.value = '';
             if (tagsInput) tagsInput.value = '';
             dateInput.value = '';
+            dateInput.closest('.date-picker-wrapper')?.classList.remove('has-date');
             priorityInput.value = 'medium';
             saveData();
             renderFolders();
